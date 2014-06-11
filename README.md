@@ -13,12 +13,13 @@ A pure-[Rust](http://www.rust-lang.org/) implementation of [Curve41417](http://s
 $ make
 ```
 
-* Run tests, benchmarks and build documentation:
+* Run tests, examples, benchmarks and build documentation:
 
 ```
 $ make test
+$ make examples  # Build examples from examples/
 $ make bench
-$ make doc
+$ make doc  # Build documentation in doc/
 ```
 
 ## Example
@@ -39,6 +40,11 @@ assert!(shared1 == shared2);
 ```
 
 For a more detailed example see [example.rs](examples/example.rs).
+
+
+## Documentation
+
+The generated documentation is available [here](http://seb.dbzteam.org/rust-curve41417/curve41417/).
 
 
 ## Notes

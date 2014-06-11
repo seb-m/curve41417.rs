@@ -9,29 +9,34 @@ A pure-[Rust](http://www.rust-lang.org/) implementation of [Curve41417](http://s
 
 * Build as library:
 
-      $ make
+```
+$ make
+```
 
 * Run tests, benchmarks and build documentation:
 
-      $ make test
-      $ make bench
-      $ make doc
-
+```
+$ make test
+$ make bench
+$ make doc
+```
 
 ## Example
 
 Consider this basic example performing a Diffie-Hellman in Curve41417 Montgomery's representation:
 
-    extern crate curve41417;
-    use curve41417::mont;
+```
+extern crate curve41417;
+use curve41417::mont;
 
-    let (pk1, sk1) = mont::keypair();
-    let (pk2, sk2) = mont::keypair();
+let (pk1, sk1) = mont::keypair();
+let (pk2, sk2) = mont::keypair();
 
-    let shared1 = mont::scalar_mult(&sk1, &pk2);
-    let shared2 = mont::scalar_mult(&sk2, &pk1);
+let shared1 = mont::scalar_mult(&sk1, &pk2);
+let shared2 = mont::scalar_mult(&sk2, &pk1);
 
-    assert!(shared1 == shared2);
+assert!(shared1 == shared2);
+```
 
 For a more detailed example see [example.rs](examples/example.rs).
 

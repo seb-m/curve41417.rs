@@ -1,23 +1,25 @@
 // A Curve41417 field element representation.
+use serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 
 use bytes::{B416, Bytes, Uniformity};
+use sbuf::{StdHeapAllocator, SBuf};
 use utils;
-use utils::ZeroMemory;
 
 
 static FE_SIZE: uint = 26;
 
 static ONE: [i64, ..FE_SIZE] = [
-    1i64, 0, 0, 0, 0, 0, 0, 0,
+    1, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0];
 
 
+#[deriving(Clone)]
 pub struct FieldElem {
-    elem: [i64, ..FE_SIZE]
+    elem: SBuf<StdHeapAllocator, i64>
 }
 
 impl FieldElem {
@@ -27,31 +29,36 @@ impl FieldElem {
 
     pub fn zero() -> FieldElem {
         FieldElem {
-            elem: [0i64, ..FE_SIZE]
+            elem: SBuf::new_zero(FE_SIZE)
         }
     }
 
     pub fn one() -> FieldElem {
         FieldElem {
-            elem: ONE
+            elem: SBuf::from_slice(ONE.as_slice())
         }
     }
 
-    pub fn get_limb(&self, index: uint) -> i64 {
-        self.elem[index]
+    // Return a reference to the limb at index `index`. Fails if
+    // `index` is out of bounds.
+    pub fn get<'a>(&'a self, index: uint) -> &'a i64 {
+        self.elem.get(index)
     }
 
-    pub fn set_limb(&mut self, index: uint, value: i64) {
-        self.elem[index] = value;
+    // Return a mutable reference to the limb at index `index`. Fails
+    // if `index` is out of bounds.
+    pub fn get_mut<'a>(&'a mut self, index: uint) -> &'a mut i64 {
+        self.elem.get_mut(index)
     }
 
     pub fn unpack(bytes: &B416) -> FieldElem {
         let mut n = FieldElem::new();
 
         for i in range(0u, 26) {
-            n.elem[i] = bytes[2 * i] as i64 + (bytes[2 * i + 1] as i64 << 8);
+            *n.get_mut(i) = *bytes.get(2 * i) as i64 +
+                (*bytes.get(2 * i + 1) as i64 << 8);
         }
-        n.elem[25] &= 0x3fff; // mask top 2 bits
+        *n.get_mut(25) &= 0x3fff; // mask top 2 bits
         n
     }
 
@@ -60,34 +67,28 @@ impl FieldElem {
         let mut r: B416 = Bytes::new_zero();
 
         for i in range(0u, FE_SIZE) {
-            r.as_mut_bytes()[2 * i] = (t.elem[i] & 0xff) as u8;
-            r.as_mut_bytes()[2 * i + 1] = (t.elem[i] >> 8) as u8;
+            *r.get_mut(2 * i) = (*t.get(i) & 0xff) as u8;
+            *r.get_mut(2 * i + 1) = (*t.get(i) >> 8) as u8;
         }
         r
     }
 
-    pub fn to_str_hex(&self) -> String {
-        self.pack().to_str_hex()
-    }
-
-    fn cleanup(&mut self) {
-        self.elem.zero_memory();
-    }
-
     pub fn cswap(&mut self, cond: i64, other: &mut FieldElem) {
-        utils::bytes_cswap::<i64>(cond, self.elem, other.elem);
+        utils::bytes_cswap::<i64>(cond,
+                                  self.elem.as_mut_slice(),
+                                  other.elem.as_mut_slice());
     }
 
     pub fn carry(&self) -> FieldElem {
         let mut r = self.clone();
         let mut c: i64;
 
-        for i in range(0, r.elem.len()) {
-            r.elem[i] += 1_i64 << 16;
-            c = r.elem[i] >> 16;
-            r.elem[(i + 1) * ((i < 25) as uint)] += c - 1 + 67 * (c - 1) *
+        for i in range(0, r.len()) {
+            *r.get_mut(i) += 1_i64 << 16;
+            c = *r.get(i) >> 16;
+            *r.get_mut((i + 1) * ((i < 25) as uint)) += c - 1 + 67 * (c - 1) *
                 ((i == 25) as i64);
-            r.elem[i] -= c << 16;
+            *r.get_mut(i) -= c << 16;
         }
         r
     }
@@ -98,16 +99,16 @@ impl FieldElem {
         let mut m = FieldElem::new();
 
         for _ in range(0, 3) {
-            m.elem[0] = r.elem[0] - 0xffef;
+            *m.get_mut(0) = *r.get(0) - 0xffef;
             for j in range(1u, 25) {
-                m.elem[j] = r.elem[j] - 0xffff - ((m.elem[j - 1] >> 16) & 1);
-                m.elem[j - 1] &= 0xffff;
+                *m.get_mut(j) = *r.get(j) - 0xffff - ((*m.get(j - 1) >> 16) & 1);
+                *m.get_mut(j - 1) &= 0xffff;
             }
-            m.elem[25] = r.elem[25] - 0x3fff - ((m.elem[24] >> 16) & 1);
-            m.elem[24] &= 0xffff;
-            let b = (m.elem[25] >> 16) & 1;
-            m.elem[25] &= 0xffff;
-            utils::bytes_cswap(1 - b, r.elem, m.elem);
+            *m.get_mut(25) = *r.get(25) - 0x3fff - ((*m.get(24) >> 16) & 1);
+            *m.get_mut(24) &= 0xffff;
+            let b = (*m.get(25) >> 16) & 1;
+            *m.get_mut(25) &= 0xffff;
+            r.cswap(1 - b, &mut m);
         }
         r
     }
@@ -121,11 +122,12 @@ impl FieldElem {
         let mut r = FieldElem::new();
 
         for i in range(0u, 26) {
-            r.elem[i] = n[2 * i] as i64 + (n[2 * i + 1] as i64 << 8);
+            *r.get_mut(i) = *n.get(2 * i) as i64 +
+                (*n.get(2 * i + 1) as i64 << 8);
         }
         for i in range(26u, l) {
-            r.elem[i - 26] += (n[2 * i] as i64 +
-                               (n[2 * i + 1] as i64 << 8)) * 68;
+            *r.get_mut(i - 26) += (*n.get(2 * i) as i64 +
+                                   (*n.get(2 * i + 1) as i64 << 8)) * 68;
         }
 
         r.carry().carry()
@@ -133,14 +135,14 @@ impl FieldElem {
 
     pub fn parity_bit(&self) -> u8 {
         let t = self.pack();
-        t[0] & 1
+        *t.get(0) & 1
     }
 
     pub fn muli(&self, other: i16) -> FieldElem {
         let mut r = self.clone();
 
-        for i in range(0, r.elem.len()) {
-            r.elem[i] *= other as i64;
+        for i in range(0, r.len()) {
+            *r.get_mut(i) *= other as i64;
         }
 
         r.carry().carry()
@@ -205,8 +207,8 @@ impl FieldElem {
 impl Add<FieldElem, FieldElem> for FieldElem {
     fn add(&self, other: &FieldElem) -> FieldElem {
         let mut r = self.clone();
-        for i in range(0, r.elem.len()) {
-            r.elem[i] += other.elem[i];
+        for i in range(0, r.len()) {
+            *r.get_mut(i) += *other.get(i);
         }
         r
     }
@@ -215,8 +217,8 @@ impl Add<FieldElem, FieldElem> for FieldElem {
 impl Sub<FieldElem, FieldElem> for FieldElem {
     fn sub(&self, other: &FieldElem) -> FieldElem {
         let mut r = self.clone();
-        for i in range(0, r.elem.len()) {
-            r.elem[i] -= other.elem[i];
+        for i in range(0, r.len()) {
+            *r.get_mut(i) -= *other.get(i);
         }
         r
     }
@@ -236,31 +238,15 @@ impl Mul<FieldElem, FieldElem> for FieldElem {
         for i in range(0u, 26) {
             u = 0;
             for j in range(0u, i + 1) {
-                u += self.elem[j] * other.elem[i - j];
+                u += *self.get(j) * *other.get(i - j);
             }
             for j in range(i + 1, 26) {
-                u += 68 * self.elem[j] * other.elem[i + 26 - j];
+                u += 68 * *self.get(j) * *other.get(i + 26 - j);
             }
-            r.elem.as_mut_slice()[i] = u;
+            *r.get_mut(i) = u;
         }
 
         r.carry().carry()
-    }
-}
-
-impl Drop for FieldElem {
-    fn drop(&mut self) {
-        self.cleanup();
-    }
-}
-
-impl Clone for FieldElem {
-    fn clone(&self) -> FieldElem {
-        let mut n = FieldElem::new();
-        let count = n.elem.len();
-        utils::copy_slice_memory(n.elem.as_mut_slice(),
-                                 self.elem.as_slice(), count);
-        n
     }
 }
 
@@ -272,7 +258,13 @@ impl Default for FieldElem {
 
 impl Show for FieldElem {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}", self.to_str_hex())
+        self.pack().fmt(f)
+    }
+}
+
+impl ToHex for FieldElem {
+    fn to_hex(&self) -> String {
+        self.pack().to_hex()
     }
 }
 
@@ -285,8 +277,8 @@ impl PartialEq for FieldElem {
 impl Eq for FieldElem {
 }
 
-impl Index<uint, i64> for FieldElem {
-    fn index(&self, index: &uint) -> i64 {
-        self.get_limb(*index)
+impl Collection for FieldElem {
+    fn len(&self) -> uint {
+        self.elem.len()
     }
 }

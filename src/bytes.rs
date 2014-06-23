@@ -1,36 +1,34 @@
 //! Raw bytes representations
 //!
 //! These containers are used to store packed scalars and curve points.
-use std::default::Default;
+use serialize::hex::{FromHex, ToHex};
 use std::fmt::{Show, Formatter, Result};
 use std::from_str::FromStr;
-use std::num::FromStrRadix;
 use std::rand::{Rand, Rng};
 use std::slice::bytes;
 
 use ed::GroupElem;
 use mont;
+use sbuf::{StdHeapAllocator, SBuf};
 use utils;
-use utils::ZeroMemory;
 
 
 /// Raw bytes-representation.
 ///
 /// Used to pass data as input argument and for returning results in
 /// crypto operations.
-pub trait Bytes: PartialEq + Eq + Index<uint, u8> + Rand + Show +
-    FromStr + Drop + Clone {
+pub trait Bytes: PartialEq + Eq + Rand + Show + Clone + Collection {
     /// Return a new element with all its bytes set to zero.
     fn new_zero() -> Self;
 
     /// Return a new random element (use urandom as PRNG).
     fn new_rand() -> Self;
 
-    /// Instanciate a new `B416` object from a byte slice.
+    /// Return a new instance from a byte slice.
     fn from_bytes(bytes: &[u8]) -> Option<Self> {
         let mut nb: Self = Bytes::new_zero();
 
-        if nb.as_bytes().len() != bytes.len() {
+        if nb.len() != bytes.len() {
             return None;
         }
 
@@ -38,20 +36,23 @@ pub trait Bytes: PartialEq + Eq + Index<uint, u8> + Rand + Show +
         Some(nb)
     }
 
-    /// Access internal bytes as a byte slice.
+    /// Return a reference on the internal bytes as a byte slice.
     fn as_bytes<'a>(&'a self) -> &'a [u8];
 
-    /// Access internal mutable bytes as a mutable byte slice.
+    /// Return a mutable reference on the internal bytes as a mutable byte
+    /// slice.
     fn as_mut_bytes<'a>(&'a mut self) -> &'a mut [u8];
 
-    /// Transform bytes to hex-string.
-    fn to_str_hex(&self) -> String {
-        utils::bytes_to_str_hex(self.as_bytes())
+    /// Return a reference to the byte at index `index`. Fails if
+    /// `index` is out of bounds.
+    fn get<'a>(&'a self, index: uint) -> &'a u8 {
+        &self.as_bytes()[index]
     }
 
-    #[doc(hidden)]
-    fn cleanup(&mut self) {
-        self.as_mut_bytes().zero_memory();
+    /// Return a mutable reference to the byte at index `index`. Fails
+    /// if `index` is out of bounds.
+    fn get_mut<'a>(&'a mut self, index: uint) -> &'a mut u8 {
+        &mut self.as_mut_bytes()[index]
     }
 }
 
@@ -59,26 +60,29 @@ pub trait Bytes: PartialEq + Eq + Index<uint, u8> + Rand + Show +
 // These struct declarations are not inserted in the macro because
 // it seems the macros variables cannot be expanded in the comments.
 /// 52-bytes container.
+#[deriving(Clone, Eq, PartialEq, Encodable, Decodable)]
 pub struct B416 {
-    bytes: [u8, ..52]
+    bytes: SBuf<StdHeapAllocator, u8>
 }
 
 impl B416 {
-    /// Clamp bytes to set value in `8.{1,2,3,...,2^410-1} + 2^413`.
+    /// Clamp its bytes to set its value in `8.{1,2,3,...,2^410-1} + 2^413`.
     pub fn clamp_41417(&mut self) {
-        self.bytes[51] = (self.bytes[51] & 63) | 32;
-        self.bytes[0] &= 248;
+        *self.get_mut(51) = (*self.get(51) & 63) | 32;
+        *self.get_mut(0) = *self.get(0) & 248;
     }
 }
 
 /// 64-bytes container.
+#[deriving(Clone, Eq, PartialEq, Encodable, Decodable)]
 pub struct B512 {
-    bytes: [u8, ..64]
+    bytes: SBuf<StdHeapAllocator, u8>
 }
 
 /// 104-bytes container.
+#[deriving(Clone, Eq, PartialEq, Encodable, Decodable)]
 pub struct B832 {
-    bytes: [u8, ..104]
+    bytes: SBuf<StdHeapAllocator, u8>
 }
 
 
@@ -88,7 +92,7 @@ impl Bytes for $name {
     /// Return a new instance initialized to zero.
     fn new_zero() -> $name {
         $name {
-            bytes: [0u8, ..$size]
+            bytes: SBuf::<StdHeapAllocator, u8>::new_zero($size)
         }
     }
 
@@ -98,71 +102,35 @@ impl Bytes for $name {
         Rand::rand(rng)
     }
 
-    /// Access internal bytes as a byte slice.
+    /// Return a reference on the internal bytes as a byte slice.
     fn as_bytes<'a>(&'a self) -> &'a [u8] {
         self.bytes.as_slice()
     }
 
-    /// Access internal mutable bytes as a mutable byte slice.
+    /// Return a mutable reference on the internal bytes as a mutable byte
+    /// slice.
     fn as_mut_bytes<'a>(&'a mut self) -> &'a mut [u8] {
         self.bytes.as_mut_slice()
-    }
-}
-
-impl Drop for $name {
-    /// Before being released the internal buffer is zeroed-out.
-    fn drop(&mut self) {
-        self.cleanup();
-    }
-}
-
-impl Clone for $name {
-    fn clone(&self) -> $name {
-        Bytes::from_bytes(self.bytes).unwrap()
-    }
-}
-
-impl Default for $name {
-    /// Return a new random value (use urandom as PRNG).
-    fn default() -> $name {
-        Bytes::new_rand()
     }
 }
 
 impl FromStr for $name {
     /// Convert from an hex-string.
     fn from_str(s: &str) -> Option<$name> {
-        if s.len() != $size * 2 {
-            return None;
+        let b = s.from_hex();
+        if b.is_err() {
+            return None
         }
 
-        let mut b = [0u8, ..$size];
-        for i in range(0u, $size) {
-            b[i] = FromStrRadix::from_str_radix(String::from_str(s).as_slice().
-                                                slice(2 * i, (i + 1) * 2),
-                                                16).unwrap();
-        }
-        let r = Bytes::from_bytes(b);
-        b.zero_memory();
-        r
+        Bytes::from_bytes(b.unwrap().as_slice())
     }
 }
 
 impl Show for $name {
     /// Format as hex-string.
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}", self.to_str_hex())
+        write!(f, "{}", self.to_hex())
     }
-}
-
-impl PartialEq for $name {
-    /// Constant-time equality comparison.
-    fn eq(&self, other: &$name) -> bool {
-        utils::bytes_eq(self.bytes, other.bytes)
-    }
-}
-
-impl Eq for $name {
 }
 
 impl Rand for $name {
@@ -171,15 +139,20 @@ impl Rand for $name {
     /// uses urandom.
     fn rand<R: Rng>(rng: &mut R) -> $name {
         let mut n: $name = Bytes::new_zero();
-        rng.fill_bytes(n.bytes);
+        rng.fill_bytes(n.as_mut_bytes());
         n
     }
 }
 
-impl Index<uint, u8> for $name {
-    /// Return byte at `index`.
-    fn index(&self, index: &uint) -> u8 {
-        self.bytes.as_slice()[*index]
+impl Collection for $name {
+    fn len(&self) -> uint {
+        self.bytes.len()
+    }
+}
+
+impl ToHex for $name {
+    fn to_hex(&self) -> String {
+        self.bytes.to_hex()
     }
 }
 
@@ -187,11 +160,11 @@ impl Index<uint, u8> for $name {
 #[cfg(test)]
 mod $test_mod_id {
     use std::io::MemWriter;
+    use std::rand::{Rng, Rand};
     use std::str;
     use std::from_str::FromStr;
 
-    use super::*;
-    use bytes::Bytes;
+    use bytes::{Bytes, $name};
 
 
     #[test]
@@ -217,6 +190,34 @@ mod $test_mod_id {
         let e = d.clone();
         assert!(d == e);
     }
+
+    struct MockRng {
+        val: u32
+    }
+
+    impl MockRng {
+        pub fn new() -> MockRng {
+            MockRng {
+                val: 0x42424242
+            }
+        }
+    }
+
+    impl Rng for MockRng {
+        fn next_u32(&mut self) -> u32 {
+            self.val
+        }
+    }
+
+    #[test]
+    fn test_rand() {
+        let mut rng = MockRng::new();
+        let r: $name = Rand::rand(&mut rng);
+
+        for i in range(0u, $size) {
+            assert!(*r.get(i) == 0x42);
+        }
+    }
 }
 
 ))
@@ -226,7 +227,7 @@ bytes_impl!(B512, test_b512, 64)
 bytes_impl!(B832, test_b832, 104)
 
 
-/// Tag `Bytes` containers sufficiently large for providing a good
+/// Tag `Bytes` containers deemed sufficiently large for providing a good
 /// uniformity of the distribution `mod L`.
 pub trait Uniformity {
 }
@@ -261,13 +262,20 @@ macro_rules! wrapper_impl(($name:ident) => (
 /// let sk = Scalar(s);
 /// let pk: MontPoint = mont::scalar_mult_base(&sk);
 /// ```
+#[deriving(Clone, Show, Eq, PartialEq, Encodable, Decodable)]
 pub struct $name(pub B416);
 
 impl $name {
-    /// Access the wrapped value as a reference.
+    /// Return the wrapped value as a reference.
     pub fn get_ref<'a>(&'a self) -> &'a B416 {
         let &$name(ref val) = self;
         val
+    }
+
+    /// Return a reference to the byte at index `index`. Fails if
+    /// `index` is out of bounds.
+    pub fn get<'a>(&'a self, index: uint) -> &'a u8 {
+        self.get_ref().get(index)
     }
 
     /// Return the wrapped value, consume `self`.
@@ -277,30 +285,9 @@ impl $name {
     }
 }
 
-impl Clone for $name {
-    fn clone(&self) -> $name {
-        $name(self.get_ref().clone())
-    }
-}
-
-impl Show for $name {
-    /// Format the wrapped value as hex-string.
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}", self.get_ref().to_str_hex())
-    }
-}
-
-impl PartialEq for $name {
-    /// Compare wrapped values in constant time.
-    fn eq(&self, other: &$name) -> bool {
-        self.get_ref() == other.get_ref()
-    }
-}
-
-impl Index<uint, u8> for $name {
-    /// Return the byte at `index` in the wrapped value.
-    fn index(&self, index: &uint) -> u8 {
-        self.get_ref().as_bytes()[*index]
+impl ToHex for $name {
+    fn to_hex(&self) -> String {
+        self.get_ref().to_hex()
     }
 }
 

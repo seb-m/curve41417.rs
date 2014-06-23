@@ -1,36 +1,30 @@
 // Crypto utils.
+use std::intrinsics;
+use std::mem;
 use std::num;
-use std::num::Bitwise;
 use std::ptr;
 use std::rand::os::OsRng;
 use std::slice::MutableVector;
-use std::str;
 
-
-pub trait ZeroMemory {
-    fn zero_memory(self);
-}
 
 // Zero-out memory buffer.
-#[allow(experimental)]
-impl<'a, T> ZeroMemory for &'a mut [T] {
-    fn zero_memory(self) {
-        unsafe {
-            // FIXME: use memset_s instead of a wrapper to memset, or maybe as
-            // llvm intrinsics are internally synthesized it is maybe a sufficient
-            // guarantee for corresponding code to be effectively emitted (to
-            // confirm).
-            ptr::zero_memory(self.as_mut_ptr(), self.len());
-        }
+#[allow(dead_code)]
+fn zero_memory<T>(b: &mut [T]) {
+    unsafe {
+        // FIXME: not sure how much this llvm intrinsics could not be
+        // optimized-out, maybe it would be better to use memset_s.
+        intrinsics::volatile_set_memory(b.as_mut_ptr(), 0, b.len());
     }
 }
 
 // Copy count elements from slice src to mutable slice dst.
 // Requirement: count >= min(srclen, dstlen)
+#[allow(dead_code)]
 pub fn copy_slice_memory<T>(dst: &mut[T], src: &[T], count: uint) {
     assert!(dst.len() >= count && src.len() >= count);
     unsafe {
-        ptr::copy_nonoverlapping_memory(dst.as_mut_ptr(), src.as_ptr(),
+        ptr::copy_nonoverlapping_memory(dst.as_mut_ptr(),
+                                        src.as_ptr(),
                                         count);
     }
 }
@@ -45,25 +39,35 @@ fn byte_eq(x: u8, y: u8) -> u8 {
 }
 
 // Return true iff x == y; false otherwise.
-pub fn bytes_eq(x: &[u8], y: &[u8]) -> bool {
+pub fn bytes_eq<T>(x: &[T], y: &[T]) -> bool {
     if x.len() != y.len() {
         return false;
     }
 
+    let size = x.len() * mem::size_of::<T>();
+    let px = x.as_ptr() as *u8;
+    let py = y.as_ptr() as *u8;
+
     let mut d: u8 = 0;
-    for (&x1, &y1) in x.iter().zip(y.iter()) {
-        d |= x1 ^ y1;
+    unsafe {
+        for i in range(0, size) {
+            d |= *px.offset(i as int) ^ *py.offset(i as int);
+        }
     }
 
+    // Would prefer to return the result of byte_eq() instead of making
+    // this last comparison, but this function is called from contexts where
+    // boolean values are explicitly expected and this comparison seems
+    // the only way to convert to a bool in rust.
     byte_eq(d, 0) == 1
 }
 
 // x and y are swapped iff cond is 1, there are left unchanged iff cond is 0.
 // Currently only works for arrays of signed integers. cond is expected to
 // be 0 or 1.
-pub fn bytes_cswap<T: Signed + Primitive + Bitwise>(cond: T,
-                                                    x: &mut [T],
-                                                    y: &mut [T]) {
+pub fn bytes_cswap<T: Signed + Primitive + Int>(cond: T,
+                                                x: &mut [T],
+                                                y: &mut [T]) {
     assert_eq!(x.len(), y.len());
 
     let c: T = !(cond - num::one());
@@ -79,23 +83,14 @@ pub fn urandom_rng() -> OsRng {
     OsRng::new().unwrap()
 }
 
-// Return formatted hex string.
-pub fn bytes_to_str_hex(v: &[u8]) -> String {
-    let mut s: Vec<u8> = Vec::from_elem(v.len() * 2, 0u8);
-    for i in range(0u, v.len()) {
-        let digit = format!("{:02x}", v[i] as uint);
-        *s.get_mut(i * 2 + 0) = digit.as_slice()[0];
-        *s.get_mut(i * 2 + 1) = digit.as_slice()[1];
-    }
-    str::from_utf8(s.as_slice()).unwrap().to_string()
-}
-
 
 #[cfg(test)]
 mod tests {
     use std::path::BytesContainer;
     use std::rand::random;
-    use super::*;
+
+    use utils;
+
 
     #[test]
     fn test_zero_memory() {
@@ -107,7 +102,7 @@ mod tests {
         let zero = [0u32, ..16];
         let mut s = Test {x: one};
         assert!(s.x == one);
-        s.x.zero_memory();
+        super::zero_memory(s.x.as_mut_slice());
         assert!(s.x == zero);
     }
 
@@ -142,12 +137,22 @@ mod tests {
         let mut b1: [i8, ..64] = [1i8, ..64];
         let b2 = b1;
 
-        bytes_cswap(0, a1, b1);
+        utils::bytes_cswap(0, a1, b1);
         assert!(a1 == a2);
         assert!(b1 == b2);
 
-        bytes_cswap(1, a1, b1);
+        utils::bytes_cswap(1, a1, b1);
         assert!(a1 == b2);
         assert!(b1 == a2);
+    }
+
+    #[test]
+    fn test_copy_slice() {
+        let a: [i64, ..64] = [42, ..64];
+        let mut b: [i64, ..64] = [0, ..64];
+
+        assert!(a != b);
+        utils::copy_slice_memory(b.as_mut_slice(), a.as_slice(), a.len());
+        assert!(a == b);
     }
 }

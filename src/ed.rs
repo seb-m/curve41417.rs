@@ -1,4 +1,5 @@
 //! Edwards-form Curve41417 representation
+use serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 
@@ -216,7 +217,7 @@ impl GroupElem {
         // Choose between x and -x
         let mut nrx = -r.x;
         let parity = r.x.parity_bit();
-        r.x.cswap(((b[51] >> 7) ^ parity) as i64, &mut nrx);
+        r.x.cswap(((*b.get(51) >> 7) ^ parity) as i64, &mut nrx);
         r.propagate_from_xy();
 
         match success {
@@ -236,13 +237,8 @@ impl GroupElem {
         let mut r = ty.pack();
 
         // Sign(x): same as EdDSA25519
-        r.as_mut_bytes()[51] = r[51] ^ (tx.parity_bit() << 7);
+        *r.get_mut(51) = *r.get(51) ^ (tx.parity_bit() << 7);
         EdPoint(r)
-    }
-
-    /// Convert to hex-string.
-    pub fn to_str_hex(&self) -> String {
-        self.pack().unwrap().to_str_hex()
     }
 
     fn cleanup(&mut self) {
@@ -271,7 +267,7 @@ impl GroupElem {
         let mut q = GroupElem::neutral();
 
         for i in range(0u, 415).rev() {
-            let c = ((n[i / 8] >> (i & 7)) & 1) as i64;
+            let c = ((*n.get(i / 8) >> (i & 7)) & 1) as i64;
             q.cswap(c, &mut p);
             p = p + q;
             q = q + q;
@@ -400,7 +396,8 @@ impl GroupElem {
 
     /// Map a byte-string to a curve point. Return a valid group element
     /// if `n` produces to a well-defined point.
-    pub fn elligator_map_from_bytes<T: Bytes + Uniformity>(n: &T) -> Option<GroupElem> {
+    pub fn elligator_map_from_bytes<T: Bytes + Uniformity>(n: &T)
+                                                           -> Option<GroupElem> {
         GroupElem::elligator_map(&FieldElem::reduce_weak_from_bytes(n))
     }
 }
@@ -479,7 +476,13 @@ impl Default for GroupElem {
 impl Show for GroupElem {
     /// Format as hex-string.
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}", self.to_str_hex())
+        self.pack().fmt(f)
+    }
+}
+
+impl ToHex for GroupElem {
+    fn to_hex(&self) -> String {
+        self.pack().to_hex()
     }
 }
 
@@ -499,15 +502,15 @@ mod tests {
     extern crate test;
     use self::test::Bencher;
 
-    use super::*;
     use bytes::{B416, B512, B832, Bytes, Scalar};
+    use ed;
     use mont;
 
 
     #[test]
     fn test_dh_rand() {
-        let (pk1, sk1) = GroupElem::keypair();
-        let (pk2, sk2) = GroupElem::keypair();
+        let (pk1, sk1) = ed::GroupElem::keypair();
+        let (pk2, sk2) = ed::GroupElem::keypair();
 
         let ssk1 = pk2 * sk1;
         let ssk2 = pk1 * sk2;
@@ -517,17 +520,17 @@ mod tests {
 
     #[test]
     fn test_ops() {
-        let mut b = GroupElem::base();
+        let mut b = ed::GroupElem::base();
         for _ in range(0, 10) {
-            b = b + GroupElem::base();
+            b = b + ed::GroupElem::base();
         }
 
-        let nb = -GroupElem::base();
+        let nb = -ed::GroupElem::base();
         for _ in range(0, 10) {
             b = b + nb;
         }
 
-        assert!(GroupElem::base() == b);
+        assert!(ed::GroupElem::base() == b);
     }
 
     #[test]
@@ -536,7 +539,7 @@ mod tests {
         let mut cofactor: B416 = Bytes::new_zero();
         cofactor.as_mut_bytes()[0] = 0x8;
 
-        let bp = GroupElem::base();
+        let bp = ed::GroupElem::base();
         let q = bp * Scalar(n);
         let r = q.scalar_mult_cofactor();
 
@@ -552,7 +555,7 @@ mod tests {
 
     #[test]
     fn test_pack() {
-        let bp = GroupElem::base();
+        let bp = ed::GroupElem::base();
         let n = Scalar(Bytes::new_rand());
 
         let q = bp * n;
@@ -564,7 +567,7 @@ mod tests {
         let xs = tx.pack();
         let ys = ty.pack();
 
-        let uq = GroupElem::unpack(&qs).unwrap();
+        let uq = ed::GroupElem::unpack(&qs).unwrap();
 
         let uys = uq.y.pack();
         assert!(ys == uys);
@@ -575,7 +578,7 @@ mod tests {
 
     #[test]
     fn test_ed_to_mont() {
-        let bp = GroupElem::base();
+        let bp = ed::GroupElem::base();
         let n = Scalar(Bytes::new_rand());
 
         let m1 = mont::scalar_mult_base(&n);
@@ -656,11 +659,11 @@ mod tests {
         let xx2: B416 = Bytes::from_bytes(x2).unwrap();
         let yy2: B416 = Bytes::from_bytes(y2).unwrap();
 
-        let p1 = GroupElem::elligator_map_from_bytes(&nn1).unwrap();
+        let p1 = ed::GroupElem::elligator_map_from_bytes(&nn1).unwrap();
         assert!(xx1 == p1.x.pack());
         assert!(yy1 == p1.y.pack());
 
-        let p2 = GroupElem::elligator_map_from_bytes(&nn2).unwrap();
+        let p2 = ed::GroupElem::elligator_map_from_bytes(&nn2).unwrap();
         assert!(xx2 == p2.x.pack());
         assert!(yy2 == p2.y.pack());
     }
@@ -686,7 +689,7 @@ mod tests {
 
         let mut scn: B416 = Bytes::from_bytes(n).unwrap();
         let scr: B416 = Bytes::from_bytes(r).unwrap();
-        let bp = GroupElem::base();
+        let bp = ed::GroupElem::base();
 
         scn.clamp_41417();
         let q = bp * Scalar(scn);
@@ -696,7 +699,7 @@ mod tests {
 
     #[bench]
     fn bench_scalar_mult_base(b: &mut Bencher) {
-        let bp = GroupElem::base();
+        let bp = ed::GroupElem::base();
         let n = Scalar(Bytes::new_rand());
         b.iter(|| {
             bp.scalar_mult(&n);
@@ -705,7 +708,7 @@ mod tests {
 
     #[bench]
     fn bench_scalar_mult(b: &mut Bencher) {
-        let (pk, _) = GroupElem::keypair();
+        let (pk, _) = ed::GroupElem::keypair();
         let n = Scalar(Bytes::new_rand());
         b.iter(|| {
             pk.scalar_mult(&n);

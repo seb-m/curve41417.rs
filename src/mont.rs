@@ -60,11 +60,11 @@ pub fn scalar_mult(n: &Scalar, p: &MontPoint) -> MontPoint {
     z = n.get_ref().clone();
     z.clamp_41417();
 
-    a.set_limb(0, 1);
-    d.set_limb(0, 1);
+    *a.get_mut(0) = 1;
+    *d.get_mut(0) = 1;
 
     for i in range(0u, 414).rev() {
-        r = (z[i >> 3] >> (i & 7)) & 1;
+        r = (*z.get(i >> 3) >> (i & 7)) & 1;
         a.cswap(r as i64, &mut b);
         c.cswap(r as i64, &mut d);
         e = a + c;
@@ -123,17 +123,17 @@ mod tests {
     extern crate test;
     use self::test::Bencher;
 
-    use super::*;
     use bytes::{B416, Bytes, Scalar};
+    use mont;
 
 
     #[test]
     fn test_dh_rand() {
-        let (pk1, sk1) = keypair();
-        let (pk2, sk2) = keypair();
+        let (pk1, sk1) = mont::keypair();
+        let (pk2, sk2) = mont::keypair();
 
-        let ssk1w = scalar_mult(&sk1, &pk2);
-        let ssk2w = scalar_mult(&sk2, &pk1);
+        let ssk1w = mont::scalar_mult(&sk1, &pk2);
+        let ssk2w = mont::scalar_mult(&sk2, &pk1);
 
         assert!(ssk1w == ssk2w);
         assert!(ssk1w.unwrap() == ssk2w.unwrap());
@@ -161,7 +161,7 @@ mod tests {
         let scn: B416 = Bytes::from_bytes(n).unwrap();
         let scr: B416 = Bytes::from_bytes(r).unwrap();
 
-        let scrr = scalar_mult_base(&Scalar(scn)).unwrap();
+        let scrr = mont::scalar_mult_base(&Scalar(scn)).unwrap();
         assert!(scr == scrr);
     }
 
@@ -169,16 +169,16 @@ mod tests {
     fn bench_scalar_mult_base(b: &mut Bencher) {
         let n = Scalar(Bytes::new_rand());
         b.iter(|| {
-            scalar_mult_base(&n);
+            mont::scalar_mult_base(&n);
         })
     }
 
     #[bench]
     fn bench_scalar_mult(b: &mut Bencher) {
-        let (pk, _) = keypair();
+        let (pk, _) = mont::keypair();
         let n = Scalar(Bytes::new_rand());
         b.iter(|| {
-            scalar_mult(&n, &pk);
+            mont::scalar_mult(&n, &pk);
         })
     }
 }

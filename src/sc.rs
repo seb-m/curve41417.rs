@@ -1,12 +1,13 @@
 //! Curve41417 scalar operations
+use serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 use std::io::extensions;
 use std::rand::{Rand, Rng};
 
 use bytes::{B416, B832, Bytes, Scalar, Uniformity};
+use sbuf::{StdHeapAllocator, SBuf};
 use utils;
-use utils::ZeroMemory;
 
 
 static SCE_SIZE: uint = 52;
@@ -34,8 +35,9 @@ static LD: [u8, ..27] = [
 ///
 /// Provide commons Curve41417 scalar operations computed `mod L`, where
 /// `L` is the order of the base point.
+#[deriving(Clone)]
 pub struct ScalarElem {
-    elem: [i64, ..SCE_SIZE]
+    elem: SBuf<StdHeapAllocator, i64>
 }
 
 impl ScalarElem {
@@ -54,54 +56,51 @@ impl ScalarElem {
     /// Return scalar value representing `0`.
     pub fn zero() -> ScalarElem {
         ScalarElem {
-            elem: [0i64, ..SCE_SIZE]
+            elem: SBuf::new_zero(SCE_SIZE)
         }
     }
 
+    // Return a reference to the limb at index `index`. Fails if
+    // `index` is out of bounds.
     #[doc(hidden)]
-    pub fn get_limb(&self, index: uint) -> i64 {
-        self.elem[index]
+    pub fn get<'a>(&'a self, index: uint) -> &'a i64 {
+        self.elem.get(index)
     }
 
+    // Return a mutable reference to the limb at index `index`. Fails
+    // if `index` is out of bounds.
     #[doc(hidden)]
-    pub fn set_limb(&mut self, index: uint, value: i64) {
-        self.elem[index] = value;
-    }
-
-    /// Transform to hex-string.
-    pub fn to_str_hex(&self) -> String {
-        self.pack().to_str()
-    }
-
-    fn cleanup(&mut self) {
-        self.elem.zero_memory();
+    pub fn get_mut<'a>(&'a mut self, index: uint) -> &'a mut i64 {
+        self.elem.get_mut(index)
     }
 
     // Conditionally swap this scalar element with `other`. `cond` serves
     // as condition and must be `0` or `1` strictly. Values are swapped iff
     // `cond == 1`.
     fn cswap(&mut self, cond: i64, other: &mut ScalarElem) {
-        utils::bytes_cswap::<i64>(cond, self.elem, other.elem);
+        utils::bytes_cswap::<i64>(cond,
+                                  self.elem.as_mut_slice(),
+                                  other.elem.as_mut_slice());
     }
 
     // Requirements: len >= 52
     fn carry(&mut self) {
-        let top = self.elem.len() - 1;
+        let top = self.len() - 1;
         let mut carry: i64;
 
         for i in range(0, top) {
-            self.elem[i] += 1_i64 << 8;
-            carry = self.elem[i] >> 8;
-            self.elem[i + 1] += carry - 1;
-            self.elem[i] -= carry << 8;
+            *self.get_mut(i) += 1_i64 << 8;
+            carry = *self.get(i) >> 8;
+            *self.get_mut(i + 1) += carry - 1;
+            *self.get_mut(i) -= carry << 8;
         }
 
-        self.elem[top] += 1_i64 << 8;
-        carry = self.elem[top] >> 8;
+        *self.get_mut(top) += 1_i64 << 8;
+        carry = *self.get(top) >> 8;
         for i in range(0u, 27) {
-            self.elem[top - 51 + i] += (carry - 1) * (LD[i] as i64);
+            *self.get_mut(top - 51 + i) += (carry - 1) * (LD[i] as i64);
         }
-        self.elem[top] -= carry << 8;
+        *self.get_mut(top) -= carry << 8;
     }
 
     // Reduce mod 2^416 - 2^5 * d and put limbs between [0, 2^16-1] through
@@ -111,31 +110,29 @@ impl ScalarElem {
         assert!(n.len() > 52);
         assert!(n.len() <= 104);
 
-        let mut t: [i64, ..78] = [0, ..78];
+        let mut t: SBuf<StdHeapAllocator, i64> = SBuf::new_zero(78);
         for i in range(0u, 52) {
-            t[i] = n[i];
+            *t.get_mut(i) = n[i];
         }
 
         for i in range(52, n.len()) {
             for j in range(0u, 27) {
-                t[i + j - 52] += n[i] * (LD[j] as i64);
+                *t.get_mut(i + j - 52) += n[i] * (LD[j] as i64);
             }
         }
 
         for i in range(52, n.len() - 26) {
             for j in range(0u, 27) {
-                t[i + j - 52] += t[i] * (LD[j] as i64);
+                *t.get_mut(i + j - 52) += *t.get(i) * (LD[j] as i64);
             }
         }
 
         for i in range(0u, 52) {
-            self.elem[i] = t[i];
+            *self.get_mut(i) = *t.get(i);
         }
 
         self.carry();
         self.carry();
-
-        t.zero_memory();
     }
 
     fn reduce(&mut self) {
@@ -145,18 +142,18 @@ impl ScalarElem {
         // Eliminate multiples of 2^411
         let mut carry: i64 = 0;
         for i in range(0u, 52) {
-            self.elem[i] += carry - (self.elem[51] >> 3) * (L[i] as i64);
-            carry = self.elem[i] >> 8;
-            self.elem[i] &= 0xff;
+            *self.get_mut(i) += carry - (*self.get(51) >> 3) * (L[i] as i64);
+            carry = *self.get(i) >> 8;
+            *self.get_mut(i) &= 0xff;
         }
 
         // Substract L a last time in case n is in [L, 2^411-1]
         let mut m = ScalarElem::new_zero();
         carry = 0;
         for i in range(0u, 52) {
-            m.elem[i] = self.elem[i] + carry - (L[i] as i64);
-            carry = m.elem[i] >> 8;
-            m.elem[i] &= 0xff;
+            *m.get_mut(i) = *self.get(i) + carry - (L[i] as i64);
+            carry = *m.get(i) >> 8;
+            *m.get_mut(i) &= 0xff;
         }
         self.cswap(1 - (carry & 1), &mut m);
     }
@@ -166,24 +163,21 @@ impl ScalarElem {
 
         // Note: would be great to also check/assert that n is in [0, L - 1].
         for i in range(0u, 52) {
-            r.elem[i] = n[i] as i64;
+            *r.get_mut(i) = *n.get(i) as i64;
         }
         r
     }
 
     fn unpack_w_reduce<T: Bytes>(n: &T) -> ScalarElem {
         let l = n.as_bytes().len();
-
-        let mut t: Vec<i64> = Vec::with_capacity(l);
+        let mut t: SBuf<StdHeapAllocator, i64> = SBuf::new_zero(l);
 
         for i in range(0, l) {
-            t.push(n[i] as i64);
+            *t.get_mut(i) = *n.get(i) as i64;
         }
 
         let mut r = ScalarElem::new_zero();
         r.reduce_weak(t.as_slice());
-
-        t.as_mut_slice().zero_memory();
         r
     }
 
@@ -215,7 +209,7 @@ impl ScalarElem {
 
         let mut b: B416 = Bytes::new_zero();
         for i in range(0u, 52) {
-            b.as_mut_bytes()[i] = (t[i] & 0xff) as u8;
+            *b.get_mut(i) = (*t.get(i) & 0xff) as u8;
         }
         Scalar(b)
     }
@@ -230,8 +224,8 @@ impl Add<ScalarElem, ScalarElem> for ScalarElem {
     /// Add scalars.
     fn add(&self, other: &ScalarElem) -> ScalarElem {
         let mut r = self.clone();
-        for i in range(0, self.elem.len()) {
-            r.elem[i] += other.elem[i];
+        for i in range(0, self.len()) {
+            *r.get_mut(i) += *other.get(i);
         }
         r
     }
@@ -241,8 +235,8 @@ impl Sub<ScalarElem, ScalarElem> for ScalarElem {
     /// Substract scalars.
     fn sub(&self, other: &ScalarElem) -> ScalarElem {
         let mut r = self.clone();
-        for i in range(0, self.elem.len()) {
-            r.elem[i] -= other.elem[i];
+        for i in range(0, self.len()) {
+            *r.get_mut(i) -= *other.get(i);
         }
         r
     }
@@ -258,17 +252,16 @@ impl Neg<ScalarElem> for ScalarElem {
 impl Mul<ScalarElem, ScalarElem> for ScalarElem {
     /// Multiply scalars.
     fn mul(&self, other: &ScalarElem) -> ScalarElem {
-        let mut t: [i64, ..103] = [0, ..103];
+        let mut t: SBuf<StdHeapAllocator, i64> = SBuf::new_zero(103);
 
         for i in range(0u, 52) {
             for j in range(0u, 52) {
-                t[i + j] += self.elem[i] * other.elem[j];
+                *t.get_mut(i + j) += *self.get(i) * *other.get(j);
             }
         }
 
         let mut r = ScalarElem::new_zero();
-        r.reduce_weak(t);
-        t.zero_memory();
+        r.reduce_weak(t.as_slice());
         r
     }
 }
@@ -287,23 +280,6 @@ impl FromPrimitive for ScalarElem {
             }
         });
         ScalarElem::unpack(&s)
-    }
-}
-
-impl Drop for ScalarElem {
-    /// Before being released scalar's internal buffer is zeroed-out.
-    fn drop(&mut self) {
-        self.cleanup();
-    }
-}
-
-impl Clone for ScalarElem {
-    fn clone(&self) -> ScalarElem {
-        let mut n = ScalarElem::new_zero();
-        let count = n.elem.len();
-        utils::copy_slice_memory(n.elem.as_mut_slice(),
-                                 self.elem.as_slice(), count);
-        n
     }
 }
 
@@ -327,7 +303,13 @@ impl Rand for ScalarElem {
 impl Show for ScalarElem {
     /// Format as hex-string.
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}", self.to_str_hex())
+        self.pack().fmt(f)
+    }
+}
+
+impl ToHex for ScalarElem {
+    fn to_hex(&self) -> String {
+        self.pack().to_hex()
     }
 }
 
@@ -341,18 +323,17 @@ impl PartialEq for ScalarElem {
     }
 }
 
-impl Index<uint, i64> for ScalarElem {
-    /// Return scalar's byte at `index`.
-    fn index(&self, index: &uint) -> i64 {
-        self.get_limb(*index)
+impl Collection for ScalarElem {
+    fn len(&self) -> uint {
+        self.elem.len()
     }
 }
 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bytes::{B416, B512, B832, Bytes};
+    use sc::ScalarElem;
 
 
     #[test]

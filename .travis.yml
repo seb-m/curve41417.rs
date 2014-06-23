@@ -9,8 +9,8 @@ install:
 script:
   - make clean
   - make lib
-  - make mlock
-  - make test
+#  - make mlock
+#  - make test
   - make doc
 after_script:
   - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh

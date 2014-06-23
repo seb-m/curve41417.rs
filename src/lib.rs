@@ -14,13 +14,15 @@
 #![feature(macro_rules)]
 #![feature(unsafe_destructor)]
 
+#![allow(dead_code)]
+
 #[cfg(test)] extern crate debug;
 extern crate alloc;
 extern crate libc;
 extern crate serialize;
 
 mod utils;
-pub mod sbuf;
+mod sbuf;
 pub mod bytes;
 mod fe;
 pub mod mont;

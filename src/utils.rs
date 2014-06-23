@@ -8,7 +8,6 @@ use std::slice::MutableVector;
 
 
 // Zero-out memory buffer.
-#[allow(dead_code)]
 fn zero_memory<T>(b: &mut [T]) {
     unsafe {
         // FIXME: not sure how much this llvm intrinsics could not be
@@ -19,7 +18,6 @@ fn zero_memory<T>(b: &mut [T]) {
 
 // Copy count elements from slice src to mutable slice dst.
 // Requirement: count >= min(srclen, dstlen)
-#[allow(dead_code)]
 pub fn copy_slice_memory<T>(dst: &mut[T], src: &[T], count: uint) {
     assert!(dst.len() >= count && src.len() >= count);
     unsafe {

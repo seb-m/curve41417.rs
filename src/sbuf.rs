@@ -302,7 +302,6 @@ impl<A: Allocator, T> SBuf<A, T> {
     }
 }
 
-#[allow(dead_code)]
 impl<A: Allocator, T: FromPrimitive> SBuf<A, T> {
     /// New buffer from bytes.
     fn from_bytes(bytes: &[u8]) -> SBuf<A, T> {

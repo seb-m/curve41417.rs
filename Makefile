@@ -344,6 +344,7 @@ src/lib.rs: | src/
 clean:
 	find . \( -name 'basic' -or \
 		-name 'example' -or \
+		-name 'mlock' -or \
 		-name '*~' \) \
 		-print -exec rm {} \;
 	$(Q)rm -f "$(RLIB)"
@@ -447,3 +448,9 @@ symlink-info:
 	&& cd $$current \
 	&& echo "--- Created '.symlink-info'" \
 	&& cat .symlink-info
+
+# Modify mlock limits
+CC=gcc
+mlock: env/mlock.c
+	$(CC) -o env/mlock -Wall env/mlock.c
+	./env/mlock

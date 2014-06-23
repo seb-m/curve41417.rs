@@ -16,7 +16,8 @@ int main() {
   }
 
   printf("[mlock] soft limit: %llu, hard limit: %llu\n",
-	 rlp.rlim_cur, rlp.rlim_max);
+	 (unsigned long long)rlp.rlim_cur,
+	 (unsigned long long)rlp.rlim_max);
 
   if (rlp.rlim_cur < rlp.rlim_max) {
     rlp.rlim_cur = rlp.rlim_max;
@@ -36,7 +37,8 @@ int main() {
     }
 
     printf("[mlock] soft limit: %llu, hard limit: %llu\n",
-	   rlp.rlim_cur, rlp.rlim_max);
+	   (unsigned long long)rlp.rlim_cur,
+	   (unsigned long long)rlp.rlim_max);
   }
 
   return 0;

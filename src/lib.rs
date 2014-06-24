@@ -1,5 +1,5 @@
 //! Pure-Rust [Curve41417](http://safecurves.cr.yp.to/) implementation.
-#![crate_id = "github.com/seb-m/rust-curve41417#curve41417:0.2"]
+#![crate_id = "github.com/seb-m/rust-curve41417#curve41417:0.2.0"]
 #![crate_type = "lib"]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]

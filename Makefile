@@ -350,6 +350,7 @@ clean:
 	$(Q)rm -f "$(RLIB)"
 	$(Q)rm -f "$(DYLIB)"
 	$(Q)rm -rf "doc/"
+	$(Q)rm -rf "target/"
 	$(Q)rm -f "bin/main"
 	$(Q)rm -f "bin/test-internal"
 	$(Q)rm -f "bin/test-external"

@@ -49,7 +49,7 @@ The generated documentation is available [here](http://seb.dbzteam.org/rust-curv
 
 ## Notes
 
-* This code is really experimental and its crypto operations are highly unoptimized, don't use it for anything serious. If against any good judgement you use it and blow-up a space rocket I decline any responsability.
+* This code is really experimental and its crypto operations are highly unoptimized, don't use it for anything serious. You know the rules, you've been warned.
 * This code is mainly inspired by [TweetNaCl](http://tweetnacl.cr.yp.to/) and [Ed25519](http://ed25519.cr.yp.to/software.html).
 
 

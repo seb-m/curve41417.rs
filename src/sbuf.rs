@@ -1,10 +1,8 @@
 //! Secure Buffer.
 use alloc::heap;
-use libc::EINVAL;
-use libc::funcs::bsd44;
 use libc::funcs::posix88::mman;
 use libc::types::common::c95::c_void;
-use libc::types::os::arch::c95::{c_int, size_t};
+use libc::types::os::arch::c95::size_t;
 use serialize::{Encodable, Encoder, Decodable, Decoder};
 use serialize::hex::ToHex;
 use std::fmt;
@@ -44,6 +42,41 @@ impl Allocator for StdHeapAllocator {
 }
 
 
+#[cfg(target_os = "linux")]
+#[cfg(target_os = "android")]
+mod imp {
+    use libc::EINVAL;
+    use libc::funcs::bsd44;
+    use libc::types::common::c95::c_void;
+    use libc::types::os::arch::c95::{c_int, size_t};
+    use std::os;
+
+
+    pub unsafe fn madvise(ptr: *mut u8, size: uint) {
+        let dont_dump: c_int = 16;
+        let ret = bsd44::madvise(ptr as *mut c_void, size as size_t,
+                                 dont_dump);
+        if ret != 0 {
+            let errno = os::errno();
+            // FIXME: EINVAL errors are currently ignored because on
+            // Linux < 3.4 MADV_DONTDUMP is not a valid advice. There
+            // should be a better way to check for the availability of
+            // this flag in the kernel and in the libc.
+            if errno != EINVAL as int {
+                fail!("madvise failed {} ({})",
+                      os::error_string(errno as uint), errno);
+            }
+        }
+    }
+}
+
+#[cfg(not(target_os = "linux"), not(target_os = "android"))]
+mod imp {
+    pub unsafe fn madvise(_: *mut u8, _: uint) {
+    }
+}
+
+
 unsafe fn alloc<A: Allocator, T>(count: uint) -> *mut T {
     let size_of_t = mem::size_of::<T>();
 
@@ -65,21 +98,7 @@ unsafe fn alloc<A: Allocator, T>(count: uint) -> *mut T {
     }
 
     // madvise
-    if cfg!(target_os = "linux") || cfg!(target_os = "android") {
-        let dont_dump: c_int = 16;
-        let ret = bsd44::madvise(ptr as *mut c_void, size as size_t, dont_dump);
-        if ret != 0 {
-            let errno = os::errno();
-            // FIXME: EINVAL errors are currently ignored because on
-            // Linux < 3.4 MADV_DONTDUMP is not a valid advice. There
-            // should be a better way to check for the availability of
-            // this flag in the kernel and in the libc.
-            if errno != EINVAL as int {
-                fail!("madvise failed {} ({})",
-                      os::error_string(errno as uint), errno);
-            }
-        }
-    }
+    self::imp::madvise(ptr as *mut u8, size);
 
     ptr
 }

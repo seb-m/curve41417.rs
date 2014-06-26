@@ -88,7 +88,7 @@ impl ScalarElem {
         let top = self.len() - 1;
         let mut carry: i64;
 
-        for i in range(0, top) {
+        for i in range(0u, top) {
             *self.get_mut(i) += 1_i64 << 8;
             carry = *self.get(i) >> 8;
             *self.get_mut(i + 1) += carry - 1;
@@ -115,13 +115,13 @@ impl ScalarElem {
             *t.get_mut(i) = n[i];
         }
 
-        for i in range(52, n.len()) {
+        for i in range(52u, n.len()) {
             for j in range(0u, 27) {
                 *t.get_mut(i + j - 52) += n[i] * (LD[j] as i64);
             }
         }
 
-        for i in range(52, n.len() - 26) {
+        for i in range(52u, n.len() - 26) {
             for j in range(0u, 27) {
                 *t.get_mut(i + j - 52) += *t.get(i) * (LD[j] as i64);
             }
@@ -172,7 +172,7 @@ impl ScalarElem {
         let l = n.as_bytes().len();
         let mut t: SBuf<StdHeapAllocator, i64> = SBuf::new_zero(l);
 
-        for i in range(0, l) {
+        for i in range(0u, l) {
             *t.get_mut(i) = *n.get(i) as i64;
         }
 
@@ -224,7 +224,7 @@ impl Add<ScalarElem, ScalarElem> for ScalarElem {
     /// Add scalars.
     fn add(&self, other: &ScalarElem) -> ScalarElem {
         let mut r = self.clone();
-        for i in range(0, self.len()) {
+        for i in range(0u, self.len()) {
             *r.get_mut(i) += *other.get(i);
         }
         r
@@ -235,7 +235,7 @@ impl Sub<ScalarElem, ScalarElem> for ScalarElem {
     /// Substract scalars.
     fn sub(&self, other: &ScalarElem) -> ScalarElem {
         let mut r = self.clone();
-        for i in range(0, self.len()) {
+        for i in range(0u, self.len()) {
             *r.get_mut(i) -= *other.get(i);
         }
         r

@@ -388,7 +388,7 @@ impl<A: Allocator,
     fn decode(d: &mut D) -> Result<SBuf<A, T>, E> {
         d.read_seq(|d, len| {
             let mut n = SBuf::with_length(len);
-            for i in range(0, len) {
+            for i in range(0u, len) {
                 *n.get_mut(i) = try!(d.read_seq_elt(i, |d| Decodable::decode(d)));
             }
             Ok(n)

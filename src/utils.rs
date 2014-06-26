@@ -48,7 +48,7 @@ pub fn bytes_eq<T>(x: &[T], y: &[T]) -> bool {
 
     let mut d: u8 = 0;
     unsafe {
-        for i in range(0, size) {
+        for i in range(0u, size) {
             d |= *px.offset(i as int) ^ *py.offset(i as int);
         }
     }
@@ -69,7 +69,7 @@ pub fn bytes_cswap<T: Signed + Primitive + Int>(cond: T,
     assert_eq!(x.len(), y.len());
 
     let c: T = !(cond - num::one());
-    for i in range(0, x.len()) {
+    for i in range(0u, x.len()) {
         let t = c & (x[i] ^ y[i]);
         x[i] = x[i] ^ t;
         y[i] = y[i] ^ t;
@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn test_byte_eq() {
-        for _ in range(0, 256) {
+        for _ in range(0u, 256) {
             let a: u8 = random();
             let b: u8 = random();
             assert_eq!(super::byte_eq(a, b) == 1, a == b);
@@ -119,7 +119,7 @@ mod tests {
         let b: [u8, ..64] = [0u8, ..64];
         assert!(super::bytes_eq(a, b));
 
-        for _ in range(0, 256) {
+        for _ in range(0u, 256) {
             let va = Vec::from_fn(64, |_| random::<u8>());
             let a = va.container_as_bytes();
             let vb = Vec::from_fn(64, |_| random::<u8>());

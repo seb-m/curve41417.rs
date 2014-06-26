@@ -521,12 +521,12 @@ mod tests {
     #[test]
     fn test_ops() {
         let mut b = ed::GroupElem::base();
-        for _ in range(0, 10) {
+        for _ in range(0u, 10) {
             b = b + ed::GroupElem::base();
         }
 
         let nb = -ed::GroupElem::base();
-        for _ in range(0, 10) {
+        for _ in range(0u, 10) {
             b = b + nb;
         }
 
@@ -537,14 +537,14 @@ mod tests {
     fn test_scalar_cofactor() {
         let n: B416 = Bytes::new_rand();
         let mut cofactor: B416 = Bytes::new_zero();
-        cofactor.as_mut_bytes()[0] = 0x8;
+        *cofactor.get_mut(0) = 0x8;
 
         let bp = ed::GroupElem::base();
         let q = bp * Scalar(n);
         let r = q.scalar_mult_cofactor();
 
         let mut s = q.clone();
-        for _ in range(0, 7) {
+        for _ in range(0u, 7) {
             s = s + q;
         }
         assert!(s == r);

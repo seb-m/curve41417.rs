@@ -83,7 +83,7 @@ impl FieldElem {
         let mut r = self.clone();
         let mut c: i64;
 
-        for i in range(0, r.len()) {
+        for i in range(0u, r.len()) {
             *r.get_mut(i) += 1_i64 << 16;
             c = *r.get(i) >> 16;
             *r.get_mut((i + 1) * ((i < 25) as uint)) += c - 1 + 67 * (c - 1) *
@@ -98,7 +98,7 @@ impl FieldElem {
         let mut r = self.clone().carry().carry().carry();
         let mut m = FieldElem::new();
 
-        for _ in range(0, 3) {
+        for _ in range(0u, 3) {
             *m.get_mut(0) = *r.get(0) - 0xffef;
             for j in range(1u, 25) {
                 *m.get_mut(j) = *r.get(j) - 0xffff - ((*m.get(j - 1) >> 16) & 1);
@@ -141,7 +141,7 @@ impl FieldElem {
     pub fn muli(&self, other: i16) -> FieldElem {
         let mut r = self.clone();
 
-        for i in range(0, r.len()) {
+        for i in range(0u, r.len()) {
             *r.get_mut(i) *= other as i64;
         }
 
@@ -155,7 +155,7 @@ impl FieldElem {
     pub fn inv(&self) -> FieldElem {
         let mut r = self.clone();
 
-        for i in range(0, 413).rev() {
+        for i in range(0u, 413).rev() {
             r = r.square();
             if i != 1 && i != 4 {
                 r = r.mul(self);
@@ -168,7 +168,7 @@ impl FieldElem {
     pub fn pow4139(&self) -> FieldElem {
         let mut r = self.clone();
 
-        for i in range(0, 412).rev() {
+        for i in range(0u, 412).rev() {
             r = r.square();
             if i != 3 {
                 r = r.mul(self);
@@ -181,7 +181,7 @@ impl FieldElem {
     pub fn pow4125(&self) -> FieldElem {
         let mut r = self.clone();
 
-        for i in range(0, 411).rev() {
+        for i in range(0u, 411).rev() {
             r = r.square();
             if i != 2 {
                 r = r.mul(self);
@@ -194,7 +194,7 @@ impl FieldElem {
     pub fn pow4124(&self) -> FieldElem {
         let mut r = self.clone();
 
-        for i in range(0, 411).rev() {
+        for i in range(0u, 411).rev() {
             r = r.square();
             if i != 0 && i != 1 {
                 r = r.mul(self);
@@ -207,7 +207,7 @@ impl FieldElem {
 impl Add<FieldElem, FieldElem> for FieldElem {
     fn add(&self, other: &FieldElem) -> FieldElem {
         let mut r = self.clone();
-        for i in range(0, r.len()) {
+        for i in range(0u, r.len()) {
             *r.get_mut(i) += *other.get(i);
         }
         r
@@ -217,7 +217,7 @@ impl Add<FieldElem, FieldElem> for FieldElem {
 impl Sub<FieldElem, FieldElem> for FieldElem {
     fn sub(&self, other: &FieldElem) -> FieldElem {
         let mut r = self.clone();
-        for i in range(0, r.len()) {
+        for i in range(0u, r.len()) {
             *r.get_mut(i) -= *other.get(i);
         }
         r

@@ -298,6 +298,7 @@ wrapper_impl!(MontPoint)
 wrapper_impl!(EdPoint)
 
 
+#[doc(hidden)]
 trait ScalarMul<P> {
     fn mul(&self, lhs: &Scalar) -> P;
 }

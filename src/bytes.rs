@@ -298,10 +298,27 @@ wrapper_impl!(MontPoint)
 wrapper_impl!(EdPoint)
 
 
-impl Mul<MontPoint, MontPoint> for Scalar {
+trait ScalarMul<P> {
+    fn mul(&self, lhs: &Scalar) -> P;
+}
+
+impl ScalarMul<MontPoint> for MontPoint {
+    fn mul(&self, lhs: &Scalar) -> MontPoint {
+        mont::scalar_mult(lhs, self)
+    }
+}
+
+impl ScalarMul<EdPoint> for EdPoint {
+    fn mul(&self, lhs: &Scalar) -> EdPoint {
+        let p = GroupElem::unpack(self).unwrap();
+        p.scalar_mult(lhs).pack()
+    }
+}
+
+impl<S, R: ScalarMul<S>> Mul<R, S> for Scalar {
     /// Multiply scalar with point.
-    fn mul(&self, other: &MontPoint) -> MontPoint {
-        mont::scalar_mult(self, other)
+    fn mul(&self, other: &R) -> S {
+        other.mul(self)
     }
 }
 
@@ -337,7 +354,7 @@ mod tests {
         assert!(pkm1 == pkm2);
         assert!(pkm1 == bpm * sk);
 
-        let pke1 = bpe * sk;
+        let pke1 = sk * bpe;
         let pke2 = GroupElem::base().scalar_mult(&sk);
         let pke3 = pke2.pack();
         assert!(pke1 == pke3);

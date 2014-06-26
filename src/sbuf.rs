@@ -25,6 +25,7 @@ pub trait Allocator {
     unsafe fn deallocate(&self, ptr: *mut u8, size: uint, align: uint);
 }
 
+
 pub struct StdHeapAllocator;
 
 impl Allocator for StdHeapAllocator {
@@ -63,14 +64,36 @@ mod imp {
             // should be a better way to check for the availability of
             // this flag in the kernel and in the libc.
             if errno != EINVAL as int {
-                fail!("madvise failed {} ({})",
+                fail!("madvise failed: {} ({})",
                       os::error_string(errno as uint), errno);
             }
         }
     }
 }
 
-#[cfg(not(target_os = "linux"), not(target_os = "android"))]
+#[cfg(target_os = "macos")]
+#[cfg(target_os = "ios")]
+mod imp {
+    use libc::funcs::bsd44;
+    use libc::types::common::c95::c_void;
+    use libc::consts::os::bsd44::MADV_ZERO_WIRED_PAGES;
+    use libc::types::os::arch::c95::size_t;
+    use std::os;
+
+
+    pub unsafe fn madvise(ptr: *mut u8, size: uint) {
+        let ret = bsd44::madvise(ptr as *c_void, size as size_t,
+                                 MADV_ZERO_WIRED_PAGES);
+        if ret != 0 {
+            let errno = os::errno();
+            fail!("madvise failed: {} ({})",
+                  os::error_string(errno as uint), errno);
+        }
+    }
+}
+
+#[cfg(not(target_os = "linux"), not(target_os = "android"),
+      not(target_os = "macos"), not(target_os = "ios"))]
 mod imp {
     pub unsafe fn madvise(_: *mut u8, _: uint) {
     }
@@ -93,7 +116,7 @@ unsafe fn alloc<A: Allocator, T>(count: uint) -> *mut T {
     let ret = mman::mlock(ptr as *c_void, size as size_t);
     if ret != 0 {
         let errno = os::errno();
-        fail!("mlock failed {} ({})",
+        fail!("mlock failed: {} ({})",
               os::error_string(errno as uint), errno);
     }
 
@@ -122,7 +145,7 @@ unsafe fn dealloc<A: Allocator, T>(ptr: *mut T, count: uint) {
     let ret = mman::munlock(ptr as *c_void, size as size_t);
     if ret != 0 {
         let errno = os::errno();
-        fail!("munlock failed {} ({})",
+        fail!("munlock failed: {} ({})",
               os::error_string(errno as uint), errno);
     }
 

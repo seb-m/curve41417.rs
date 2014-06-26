@@ -4,7 +4,7 @@ use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 
 use bytes::{B416, Bytes, Uniformity};
-use sbuf::{StdHeapAllocator, SBuf};
+use sbuf::{DefaultAllocator, SBuf};
 use utils;
 
 
@@ -19,7 +19,7 @@ static ONE: [i64, ..FE_SIZE] = [
 
 #[deriving(Clone)]
 pub struct FieldElem {
-    elem: SBuf<StdHeapAllocator, i64>
+    elem: SBuf<DefaultAllocator, i64>
 }
 
 impl FieldElem {

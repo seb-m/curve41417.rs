@@ -1,5 +1,7 @@
 //! Secure Buffer.
 use alloc::heap;
+use libc::consts::os::posix88::{MAP_ANON, MAP_PRIVATE, MAP_FAILED,
+                                PROT_READ, PROT_WRITE, PROT_NONE};
 use libc::funcs::posix88::mman;
 use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::size_t;
@@ -25,7 +27,13 @@ pub trait Allocator {
     unsafe fn deallocate(&self, ptr: *mut u8, size: uint, align: uint);
 }
 
+/// Default allocator used to allocate and deallocate memory for secure
+/// buffers.
+pub type DefaultAllocator = GuardedHeapAllocator;
 
+
+/// Standard heap allocator, use Rust's allocator (currently jemalloc),
+/// does not implement guarded pages.
 pub struct StdHeapAllocator;
 
 impl Allocator for StdHeapAllocator {
@@ -43,9 +51,109 @@ impl Allocator for StdHeapAllocator {
 }
 
 
+#[cfg(target_os = "freebsd")]
+mod impmap {
+    use libc::consts::os::extra::MAP_NOCORE;
+    use libc::types::os::arch::c95::c_int;
+
+    pub fn additional_map_flags() -> c_int {
+        MAP_NOCORE
+    }
+}
+
+#[cfg(not(target_os = "freebsd"))]
+mod impmap {
+    use libc::types::os::arch::c95::c_int;
+
+    pub fn additional_map_flags() -> c_int {
+        0
+    }
+}
+
+
+fn round_up(size: uint, page_size: uint) -> uint {
+    assert!(size > 0 && page_size > 0);
+    if size % page_size == 0 {
+        size
+    } else {
+        size + page_size - (size % page_size)
+    }
+}
+
+
+/// Guarded heap allocator, add a guarded page before and after
+/// each allocated buffer.
+// It's very slow and not very space-efficient especially for small
+// buffers. Using a pool of buffers guarded by two pages would be
+// better for performances.
+pub struct GuardedHeapAllocator;
+
+impl Allocator for GuardedHeapAllocator {
+    fn new() -> GuardedHeapAllocator {
+        GuardedHeapAllocator
+    }
+
+    unsafe fn allocate(&self, size: uint, _: uint) -> *mut u8 {
+        let page_size = os::page_size();
+        let full_size = round_up(size, page_size) + 2 * page_size;
+
+        let null_addr: *u8 = ptr::null();
+        let ptr = mman::mmap(null_addr as *mut c_void,
+                             full_size as size_t,
+                             PROT_READ | PROT_WRITE,
+                             MAP_ANON | MAP_PRIVATE |
+                             impmap::additional_map_flags(),
+                             -1,
+                             0);
+        if ptr == MAP_FAILED {
+            let errno = os::errno();
+            fail!("mmap failed: {} ({})",
+                  os::error_string(errno as uint), errno);
+        }
+
+        let before_page = ptr;
+        let mut ret = mman::mprotect(before_page, page_size as size_t,
+                                     PROT_NONE);
+        if ret != 0 {
+            let errno = os::errno();
+            fail!("mprotect failed: {} ({})",
+                  os::error_string(errno as uint), errno);
+        }
+
+        let after_page = intrinsics::offset(ptr as *c_void,
+                                            (full_size - page_size) as int);
+        ret = mman::mprotect(after_page as *mut c_void, page_size as size_t,
+                             PROT_NONE);
+        if ret != 0 {
+            let errno = os::errno();
+            fail!("mprotect failed: {} ({})",
+                  os::error_string(errno as uint), errno);
+        }
+
+        intrinsics::offset(ptr as *c_void, page_size as int) as *mut u8
+    }
+
+    unsafe fn deallocate(&self, ptr: *mut u8, size: uint, _: uint) {
+        let page_size = os::page_size();
+        let full_size = round_up(size, page_size) + 2 * page_size;
+
+        let start_page = intrinsics::offset(ptr as *c_void,
+                                            -(page_size as int));
+
+        let ret = mman::munmap(start_page as *mut c_void,
+                               full_size as size_t);
+        if ret != 0 {
+            let errno = os::errno();
+            fail!("munmap failed: {} ({})",
+                  os::error_string(errno as uint), errno);
+        }
+    }
+}
+
+
 #[cfg(target_os = "linux")]
 #[cfg(target_os = "android")]
-mod imp {
+mod impadv {
     use libc::EINVAL;
     use libc::funcs::bsd44;
     use libc::types::common::c95::c_void;
@@ -73,7 +181,7 @@ mod imp {
 
 #[cfg(target_os = "macos")]
 #[cfg(target_os = "ios")]
-mod imp {
+mod impadv {
     use libc::funcs::bsd44;
     use libc::types::common::c95::c_void;
     use libc::consts::os::bsd44::MADV_ZERO_WIRED_PAGES;
@@ -94,7 +202,7 @@ mod imp {
 
 #[cfg(not(target_os = "linux"), not(target_os = "android"),
       not(target_os = "macos"), not(target_os = "ios"))]
-mod imp {
+mod impadv {
     pub unsafe fn madvise(_: *mut u8, _: uint) {
     }
 }
@@ -121,7 +229,7 @@ unsafe fn alloc<A: Allocator, T>(count: uint) -> *mut T {
     }
 
     // madvise
-    self::imp::madvise(ptr as *mut u8, size);
+    self::impadv::madvise(ptr as *mut u8, size);
 
     ptr
 }

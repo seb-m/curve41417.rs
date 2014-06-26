@@ -9,7 +9,7 @@ use std::slice::bytes;
 
 use ed::GroupElem;
 use mont;
-use sbuf::{StdHeapAllocator, SBuf};
+use sbuf::{DefaultAllocator, SBuf};
 use utils;
 
 
@@ -62,7 +62,7 @@ pub trait Bytes: PartialEq + Eq + Rand + Show + Clone + Collection {
 /// 52-bytes container.
 #[deriving(Clone, Eq, PartialEq, Encodable, Decodable)]
 pub struct B416 {
-    bytes: SBuf<StdHeapAllocator, u8>
+    bytes: SBuf<DefaultAllocator, u8>
 }
 
 impl B416 {
@@ -76,13 +76,13 @@ impl B416 {
 /// 64-bytes container.
 #[deriving(Clone, Eq, PartialEq, Encodable, Decodable)]
 pub struct B512 {
-    bytes: SBuf<StdHeapAllocator, u8>
+    bytes: SBuf<DefaultAllocator, u8>
 }
 
 /// 104-bytes container.
 #[deriving(Clone, Eq, PartialEq, Encodable, Decodable)]
 pub struct B832 {
-    bytes: SBuf<StdHeapAllocator, u8>
+    bytes: SBuf<DefaultAllocator, u8>
 }
 
 
@@ -92,7 +92,7 @@ impl Bytes for $name {
     /// Return a new instance initialized to zero.
     fn new_zero() -> $name {
         $name {
-            bytes: SBuf::<StdHeapAllocator, u8>::new_zero($size)
+            bytes: SBuf::<DefaultAllocator, u8>::new_zero($size)
         }
     }
 

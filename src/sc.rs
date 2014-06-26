@@ -6,7 +6,7 @@ use std::io::extensions;
 use std::rand::{Rand, Rng};
 
 use bytes::{B416, B832, Bytes, Scalar, Uniformity};
-use sbuf::{StdHeapAllocator, SBuf};
+use sbuf::{DefaultAllocator, SBuf};
 use utils;
 
 
@@ -37,7 +37,7 @@ static LD: [u8, ..27] = [
 /// `L` is the order of the base point.
 #[deriving(Clone)]
 pub struct ScalarElem {
-    elem: SBuf<StdHeapAllocator, i64>
+    elem: SBuf<DefaultAllocator, i64>
 }
 
 impl ScalarElem {
@@ -110,7 +110,7 @@ impl ScalarElem {
         assert!(n.len() > 52);
         assert!(n.len() <= 104);
 
-        let mut t: SBuf<StdHeapAllocator, i64> = SBuf::new_zero(78);
+        let mut t: SBuf<DefaultAllocator, i64> = SBuf::new_zero(78);
         for i in range(0u, 52) {
             *t.get_mut(i) = n[i];
         }
@@ -170,7 +170,7 @@ impl ScalarElem {
 
     fn unpack_w_reduce<T: Bytes>(n: &T) -> ScalarElem {
         let l = n.as_bytes().len();
-        let mut t: SBuf<StdHeapAllocator, i64> = SBuf::new_zero(l);
+        let mut t: SBuf<DefaultAllocator, i64> = SBuf::new_zero(l);
 
         for i in range(0u, l) {
             *t.get_mut(i) = *n.get(i) as i64;
@@ -252,7 +252,7 @@ impl Neg<ScalarElem> for ScalarElem {
 impl Mul<ScalarElem, ScalarElem> for ScalarElem {
     /// Multiply scalars.
     fn mul(&self, other: &ScalarElem) -> ScalarElem {
-        let mut t: SBuf<StdHeapAllocator, i64> = SBuf::new_zero(103);
+        let mut t: SBuf<DefaultAllocator, i64> = SBuf::new_zero(103);
 
         for i in range(0u, 52) {
             for j in range(0u, 52) {

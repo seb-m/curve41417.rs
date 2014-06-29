@@ -97,7 +97,7 @@ impl Allocator for GuardedHeapAllocator {
         let page_size = os::page_size();
         let full_size = round_up(size, page_size) + 2 * page_size;
 
-        let null_addr: *u8 = ptr::null();
+        let null_addr: *const u8 = ptr::null();
         let ptr = mman::mmap(null_addr as *mut c_void,
                              full_size as size_t,
                              PROT_READ | PROT_WRITE,
@@ -120,7 +120,7 @@ impl Allocator for GuardedHeapAllocator {
                   os::error_string(errno as uint), errno);
         }
 
-        let after_page = intrinsics::offset(ptr as *c_void,
+        let after_page = intrinsics::offset(ptr as *const c_void,
                                             (full_size - page_size) as int);
         ret = mman::mprotect(after_page as *mut c_void, page_size as size_t,
                              PROT_NONE);
@@ -130,14 +130,14 @@ impl Allocator for GuardedHeapAllocator {
                   os::error_string(errno as uint), errno);
         }
 
-        intrinsics::offset(ptr as *c_void, page_size as int) as *mut u8
+        intrinsics::offset(ptr as *const c_void, page_size as int) as *mut u8
     }
 
     unsafe fn deallocate(&self, ptr: *mut u8, size: uint, _: uint) {
         let page_size = os::page_size();
         let full_size = round_up(size, page_size) + 2 * page_size;
 
-        let start_page = intrinsics::offset(ptr as *c_void,
+        let start_page = intrinsics::offset(ptr as *const c_void,
                                             -(page_size as int));
 
         let ret = mman::munmap(start_page as *mut c_void,
@@ -190,7 +190,7 @@ mod impadv {
 
 
     pub unsafe fn madvise(ptr: *mut u8, size: uint) {
-        let ret = bsd44::madvise(ptr as *c_void, size as size_t,
+        let ret = bsd44::madvise(ptr as *mut c_void, size as size_t,
                                  MADV_ZERO_WIRED_PAGES);
         if ret != 0 {
             let errno = os::errno();
@@ -221,7 +221,7 @@ unsafe fn alloc<A: Allocator, T>(count: uint) -> *mut T {
     let ptr = allocator.allocate(size, mem::min_align_of::<T>()) as *mut T;
 
     // mlock
-    let ret = mman::mlock(ptr as *c_void, size as size_t);
+    let ret = mman::mlock(ptr as *const c_void, size as size_t);
     if ret != 0 {
         let errno = os::errno();
         fail!("mlock failed: {} ({})",
@@ -250,7 +250,7 @@ unsafe fn dealloc<A: Allocator, T>(ptr: *mut T, count: uint) {
     intrinsics::volatile_set_memory(ptr, 0, count);
 
     // munlock
-    let ret = mman::munlock(ptr as *c_void, size as size_t);
+    let ret = mman::munlock(ptr as *const c_void, size as size_t);
     if ret != 0 {
         let errno = os::errno();
         fail!("munlock failed: {} ({})",
@@ -263,6 +263,8 @@ unsafe fn dealloc<A: Allocator, T>(ptr: *mut T, count: uint) {
 }
 
 
+// FIXME: we could specify a default allocator here:
+//        pub struct SBuf<T, A = StdHeapAllocator> {
 pub struct SBuf<A, T> {
     len: uint,
     ptr: *mut T
@@ -307,7 +309,7 @@ impl<A: Allocator, T> SBuf<A, T> {
         let rng = &mut utils::urandom_rng();
         rng.fill_bytes(unsafe {
             mem::transmute(Slice {
-                data: n.as_mut_ptr() as *u8,
+                data: n.as_mut_ptr() as *const u8,
                 len: n.size()
             })
         });
@@ -322,7 +324,7 @@ impl<A: Allocator, T> SBuf<A, T> {
     }
 
     /// New buffer from unsafe buffer.
-    pub unsafe fn from_buf(buf: *T, length: uint) -> SBuf<A, T> {
+    pub unsafe fn from_buf(buf: *const T, length: uint) -> SBuf<A, T> {
         assert!(!buf.is_null());
         let n = SBuf::with_length(length);
         ptr::copy_nonoverlapping_memory(n.ptr, buf, n.len);
@@ -330,16 +332,16 @@ impl<A: Allocator, T> SBuf<A, T> {
     }
 
     /// Return a pointer to buffer's memory.
-    pub fn as_ptr(&self) -> *T {
+    pub fn as_ptr(&self) -> *const T {
         // (seb) Comment copied from vec.rs:
         // If we have a 0-sized vector, then the base pointer should not be NULL
         // because an iterator over the slice will attempt to yield the base
         // pointer as the first element in the vector, but this will end up
         // being Some(NULL) which is optimized to None.
         if mem::size_of::<T>() == 0 {
-            1 as *T
+            1 as *const T
         } else {
-            self.ptr as *T
+            self.ptr as *const T
         }
     }
 
@@ -367,7 +369,7 @@ impl<A: Allocator, T> SBuf<A, T> {
     pub fn as_mut_slice<'a>(&'a mut self) -> &'a mut [T] {
         unsafe {
             mem::transmute(Slice {
-                data: self.as_mut_ptr() as *T,
+                data: self.as_mut_ptr() as *const T,
                 len: self.len
             })
         }

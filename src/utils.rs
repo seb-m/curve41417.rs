@@ -43,8 +43,8 @@ pub fn bytes_eq<T>(x: &[T], y: &[T]) -> bool {
     }
 
     let size = x.len() * mem::size_of::<T>();
-    let px = x.as_ptr() as *u8;
-    let py = y.as_ptr() as *u8;
+    let px = x.as_ptr() as *const u8;
+    let py = y.as_ptr() as *const u8;
 
     let mut d: u8 = 0;
     unsafe {

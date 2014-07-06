@@ -23,10 +23,9 @@ extern crate libc;
 extern crate serialize;
 
 mod utils;
-pub mod sbuf; // fixme: pub ?
+mod sbuf;
 pub mod bytes;
 mod fe;
 pub mod mont;
 pub mod ed;
 pub mod sc;
-pub mod chacha20; //fixme

@@ -1,5 +1,5 @@
 //! Pure-Rust [Curve41417](http://safecurves.cr.yp.to/) implementation.
-#![crate_id = "github.com/seb-m/rust-curve41417#curve41417:0.2.0"]
+#![crate_name = "curve41417"]
 #![crate_type = "lib"]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
@@ -13,6 +13,7 @@
 
 #![feature(macro_rules)]
 #![feature(unsafe_destructor)]
+#![feature(default_type_params)]
 
 #![allow(dead_code)]
 
@@ -22,9 +23,10 @@ extern crate libc;
 extern crate serialize;
 
 mod utils;
-mod sbuf;
+pub mod sbuf; // fixme: pub ?
 pub mod bytes;
 mod fe;
 pub mod mont;
 pub mod ed;
 pub mod sc;
+pub mod chacha20; //fixme

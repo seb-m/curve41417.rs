@@ -11,10 +11,6 @@ install:
 script:
   - cargo clean
   - cargo build
-#  - make mlock
-#  - cargo test
-# temp
-#  - cargo doc
    - make doc
 after_script:
   - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh

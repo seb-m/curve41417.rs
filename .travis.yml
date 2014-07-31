@@ -13,6 +13,7 @@ script:
   - cargo build
 #  - make mlock
 #  - cargo test
-  - cargo doc
+#  - cargo doc
+   - make doc
 after_script:
   - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh

@@ -4,6 +4,10 @@ mlock: env/mlock.c
 	$(CC) -o env/mlock -Wall env/mlock.c
 	./env/mlock
 
+.PHONY: doc
+doc:
+	rustdoc src/lib.rs
+
 clean:
 	rm -rf doc/
 	rm -rf target/

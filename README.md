@@ -45,6 +45,11 @@ assert!(shared1 == shared2);
 For a more detailed example see [curve41417_ops.rs](examples/curve41417_ops.rs).
 
 
+## Documentation
+
+The generated documentation is also available [here](http://seb.dbzteam.org/rust-curve41417/curve41417/).
+
+
 ## Notes
 
 * This code is experimental and its crypto operations are highly unoptimized.

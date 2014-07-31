@@ -1,12 +1,10 @@
 [package]
 
 name = "curve41417"
-version = "0.2.0"
+version = "0.0.1"
 authors = [ "seb@dbzteam.org" ]
 
 
 [[lib]]
 
 name = "curve41417"
-crate-type = ["dylib", "rlib", "lib"]
-path = "src/lib.rs"

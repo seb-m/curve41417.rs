@@ -1,15 +1,17 @@
 //! Raw bytes representations
 //!
 //! These containers are used to store packed scalars and curve points.
+use serialize::{Encodable, Encoder, Decodable, Decoder};
 use serialize::hex::{FromHex, ToHex};
-use std::fmt::{Show, Formatter, Result};
+use std::fmt;
 use std::from_str::FromStr;
+use std::io::Writer;
 use std::rand::{Rand, Rng};
 use std::slice::bytes;
 
 use ed::GroupElem;
 use mont;
-use sbuf::{DefaultAllocator, SBuf};
+use sbuf::{Allocator, DefaultAllocator, SBuf};
 use utils;
 
 
@@ -17,7 +19,8 @@ use utils;
 ///
 /// Used to pass data as input argument and for returning results in
 /// crypto operations.
-pub trait Bytes: PartialEq + Eq + Rand + Show + Clone + Collection {
+pub trait Bytes: PartialEq + Eq + Rand + fmt::Show + Clone + Collection +
+    Index<uint, u8> + IndexMut<uint, u8> {
     /// Return a new element with all its bytes set to zero.
     fn new_zero() -> Self;
 
@@ -37,21 +40,21 @@ pub trait Bytes: PartialEq + Eq + Rand + Show + Clone + Collection {
     }
 
     /// Return a reference on the internal bytes as a byte slice.
-    fn as_bytes<'a>(&'a self) -> &'a [u8];
+    fn as_bytes(&self) -> &[u8];
 
     /// Return a mutable reference on the internal bytes as a mutable byte
     /// slice.
-    fn as_mut_bytes<'a>(&'a mut self) -> &'a mut [u8];
+    fn as_mut_bytes(&mut self) -> &mut [u8];
 
     /// Return a reference to the byte at index `index`. Fails if
     /// `index` is out of bounds.
-    fn get<'a>(&'a self, index: uint) -> &'a u8 {
+    fn get(&self, index: uint) -> &u8 {
         &self.as_bytes()[index]
     }
 
     /// Return a mutable reference to the byte at index `index`. Fails
     /// if `index` is out of bounds.
-    fn get_mut<'a>(&'a mut self, index: uint) -> &'a mut u8 {
+    fn get_mut(&mut self, index: uint) -> &mut u8 {
         &mut self.as_mut_bytes()[index]
     }
 }
@@ -60,63 +63,124 @@ pub trait Bytes: PartialEq + Eq + Rand + Show + Clone + Collection {
 // These struct declarations are not inserted in the macro because
 // it seems the macros variables cannot be expanded in the comments.
 /// 52-bytes container.
-#[deriving(Clone, Eq, PartialEq, Encodable, Decodable)]
-pub struct B416 {
-    bytes: SBuf<DefaultAllocator, u8>
+pub struct B416<A = DefaultAllocator> {
+    bytes: SBuf<A, u8>
 }
 
-impl B416 {
+impl<A: Allocator> B416<A> {
     /// Clamp its bytes to set its value in `8.{1,2,3,...,2^410-1} + 2^413`.
     pub fn clamp_41417(&mut self) {
-        *self.get_mut(51) = (*self.get(51) & 63) | 32;
-        *self.get_mut(0) = *self.get(0) & 248;
+        (*self)[51] = ((*self)[51] & 63) | 32;
+        (*self)[0] = (*self)[0] & 248;
     }
 }
 
 /// 64-bytes container.
-#[deriving(Clone, Eq, PartialEq, Encodable, Decodable)]
-pub struct B512 {
-    bytes: SBuf<DefaultAllocator, u8>
+pub struct B512<A = DefaultAllocator> {
+    bytes: SBuf<A, u8>
 }
 
 /// 104-bytes container.
-#[deriving(Clone, Eq, PartialEq, Encodable, Decodable)]
-pub struct B832 {
-    bytes: SBuf<DefaultAllocator, u8>
+pub struct B832<A = DefaultAllocator> {
+    bytes: SBuf<A, u8>
 }
 
 
 macro_rules! bytes_impl(($name:ident, $test_mod_id:ident, $size:expr) => (
 
-impl Bytes for $name {
+impl<A: Allocator> $name<A> {
+    /// Return the wrapped raw `SBuf` buffer value, consume `self`.
+    pub fn unwrap(self) -> SBuf<A, u8> {
+        self.bytes
+    }
+
+    /// Consume `buf` and transform it in Bxxx.
+    pub fn from_sbuf(buf: SBuf<A, u8>) -> Option<$name<A>> {
+        if buf.len() != $size {
+            return None;
+        }
+        Some($name { bytes: buf })
+    }
+}
+
+impl<A: Allocator> Bytes for $name<A> {
     /// Return a new instance initialized to zero.
-    fn new_zero() -> $name {
+    fn new_zero() -> $name<A> {
         $name {
-            bytes: SBuf::<DefaultAllocator, u8>::new_zero($size)
+            bytes: SBuf::<A, u8>::new_zero($size)
         }
     }
 
     /// Return a new randomly generated instance (use urandom as PRNG).
-    fn new_rand() -> $name {
+    fn new_rand() -> $name<A> {
         let rng = &mut utils::urandom_rng();
         Rand::rand(rng)
     }
 
     /// Return a reference on the internal bytes as a byte slice.
-    fn as_bytes<'a>(&'a self) -> &'a [u8] {
+    fn as_bytes(&self) -> &[u8] {
         self.bytes.as_slice()
     }
 
     /// Return a mutable reference on the internal bytes as a mutable byte
     /// slice.
-    fn as_mut_bytes<'a>(&'a mut self) -> &'a mut [u8] {
+    fn as_mut_bytes(&mut self) -> &mut [u8] {
         self.bytes.as_mut_slice()
     }
 }
 
-impl FromStr for $name {
+impl<A: Allocator> Clone for $name<A> {
+    fn clone(&self) -> $name<A> {
+        $name {
+            bytes: self.bytes.clone()
+        }
+    }
+}
+
+impl<A: Allocator> PartialEq for $name<A> {
+    fn eq(&self, other: &$name<A>) -> bool {
+        self.bytes == other.bytes
+    }
+}
+
+impl<A: Allocator> Eq for $name<A> {
+}
+
+impl<A: Allocator, E, S: Encoder<E>> Encodable<S, E> for $name<A> {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        self.bytes.encode(s)
+    }
+}
+
+impl<A: Allocator, E, D: Decoder<E>> Decodable<D, E> for $name<A> {
+    fn decode(d: &mut D) -> Result<$name<A>, E> {
+        let s: SBuf<A, u8> = try!(Decodable::decode(d));
+        if s.len() != $size {
+            // Would prefer to return Err() here but the type may clash
+            // with the type of the Decoder.
+            fail!("Can't decode, invalid size.");
+        }
+        Ok($name {
+            bytes: s
+        })
+    }
+}
+
+impl<A: Allocator> Index<uint, u8> for $name<A> {
+    fn index(&self, index: &uint) -> &u8 {
+        self.get(*index)
+    }
+}
+
+impl<A: Allocator> IndexMut<uint, u8> for $name<A> {
+    fn index_mut(&mut self, index: &uint) -> &mut u8 {
+        self.get_mut(*index)
+    }
+}
+
+impl<A: Allocator> FromStr for $name<A> {
     /// Convert from an hex-string.
-    fn from_str(s: &str) -> Option<$name> {
+    fn from_str(s: &str) -> Option<$name<A>> {
         let b = s.from_hex();
         if b.is_err() {
             return None
@@ -126,31 +190,31 @@ impl FromStr for $name {
     }
 }
 
-impl Show for $name {
+impl<A: Allocator> fmt::Show for $name<A> {
     /// Format as hex-string.
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.to_hex())
     }
 }
 
-impl Rand for $name {
+impl<A: Allocator> Rand for $name<A> {
     /// Generate a new random instance. Be sure to use a secure
     /// PRNG when calling this method. For instance `Bytes::new_rand()`
     /// uses urandom.
-    fn rand<R: Rng>(rng: &mut R) -> $name {
-        let mut n: $name = Bytes::new_zero();
+    fn rand<R: Rng>(rng: &mut R) -> $name<A> {
+        let mut n: $name<A> = Bytes::new_zero();
         rng.fill_bytes(n.as_mut_bytes());
         n
     }
 }
 
-impl Collection for $name {
+impl<A: Allocator> Collection for $name<A> {
     fn len(&self) -> uint {
         self.bytes.len()
     }
 }
 
-impl ToHex for $name {
+impl<A: Allocator> ToHex for $name<A> {
     fn to_hex(&self) -> String {
         self.bytes.to_hex()
     }
@@ -165,6 +229,7 @@ mod $test_mod_id {
     use std::from_str::FromStr;
 
     use bytes::{Bytes, $name};
+    use sbuf::DefaultAllocator;
 
 
     #[test]
@@ -173,18 +238,19 @@ mod $test_mod_id {
         for i in range(0u, $size) {
             t[i] = i as u8;
         }
-        let a: $name = Bytes::from_bytes(t).unwrap();
-        let b: $name = Bytes::from_bytes(t).unwrap();
-        let c: $name = Bytes::new_rand();
+        let a: $name<DefaultAllocator> = Bytes::from_bytes(t).unwrap();
+        let b: $name<DefaultAllocator> = Bytes::from_bytes(t).unwrap();
+        let c: $name<DefaultAllocator> = Bytes::new_rand();
 
         assert!(a == b);
         assert!(a != c);
 
         let mut w = MemWriter::new();
         assert!(write!(&mut w, "{}", c).is_ok());
-        let d: $name = FromStr::from_str(str::from_utf8(w.unwrap()
-                                                        .as_slice())
-                                         .unwrap()).unwrap();
+        let d: $name<DefaultAllocator> =
+            FromStr::from_str(str::from_utf8(w.unwrap()
+                                             .as_slice())
+                              .unwrap()).unwrap();
         assert!(d == c);
 
         let e = d.clone();
@@ -212,10 +278,10 @@ mod $test_mod_id {
     #[test]
     fn test_rand() {
         let mut rng = MockRng::new();
-        let r: $name = Rand::rand(&mut rng);
+        let r: $name<DefaultAllocator> = Rand::rand(&mut rng);
 
         for i in range(0u, $size) {
-            assert!(*r.get(i) == 0x42);
+            assert!(r[i] == 0x42);
         }
     }
 }
@@ -232,10 +298,10 @@ bytes_impl!(B832, test_b832, 104)
 pub trait Uniformity {
 }
 
-impl Uniformity for B512 {
+impl<A: Allocator> Uniformity for B512<A> {
 }
 
-impl Uniformity for B832 {
+impl<A: Allocator> Uniformity for B832<A> {
 }
 
 
@@ -254,38 +320,78 @@ macro_rules! wrapper_impl(($name:ident) => (
 /// For instance you might create a new secret key like this:
 ///
 /// ```
-/// use curve41417::bytes::{B416, Bytes, Scalar, MontPoint};
-/// use curve41417::mont;
+/// use bytes::{B416, Bytes, Scalar, MontPoint};
+/// use mont;
 ///
 /// let mut s: B416 = Bytes::new_rand();
 /// s.clamp_41417();
 /// let sk = Scalar(s);
 /// let pk: MontPoint = mont::scalar_mult_base(&sk);
 /// ```
-#[deriving(Clone, Show, Eq, PartialEq, Encodable, Decodable)]
-pub struct $name(pub B416);
+pub struct $name<A = DefaultAllocator>(pub B416<A>);
 
-impl $name {
+impl<A: Allocator> $name<A> {
     /// Return the wrapped value as a reference.
-    pub fn get_ref<'a>(&'a self) -> &'a B416 {
+    pub fn get_ref(&self) -> &B416<A> {
         let &$name(ref val) = self;
         val
     }
 
     /// Return a reference to the byte at index `index`. Fails if
     /// `index` is out of bounds.
-    pub fn get<'a>(&'a self, index: uint) -> &'a u8 {
+    pub fn get(&self, index: uint) -> &u8 {
         self.get_ref().get(index)
     }
 
     /// Return the wrapped value, consume `self`.
-    pub fn unwrap(self) -> B416 {
+    pub fn unwrap(self) -> B416<A> {
         let $name(val) = self;
         val
     }
 }
 
-impl ToHex for $name {
+impl<A: Allocator> Clone for $name<A> {
+    fn clone(&self) -> $name<A> {
+        $name(self.get_ref().clone())
+    }
+}
+
+impl<A: Allocator> PartialEq for $name<A> {
+    fn eq(&self, other: &$name<A>) -> bool {
+        self.get_ref() == other.get_ref()
+    }
+}
+
+impl<A: Allocator> Eq for $name<A> {
+}
+
+impl<A: Allocator> fmt::Show for $name<A> {
+    /// Format as hex-string.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.get_ref().fmt(f)
+    }
+}
+
+impl<A: Allocator, E, S: Encoder<E>> Encodable<S, E> for $name<A> {
+    fn encode(&self, s: &mut S) -> Result<(), E> {
+        self.get_ref().encode(s)
+    }
+}
+
+impl<A: Allocator, E, D: Decoder<E>> Decodable<D, E> for $name<A> {
+    fn decode(d: &mut D) -> Result<$name<A>, E> {
+        let b: B416<A> = try!(Decodable::decode(d));
+        Ok($name(b))
+    }
+}
+
+impl<A: Allocator> Index<uint, u8> for $name<A> {
+    fn index(&self, index: &uint) -> &u8 {
+        self.get(*index)
+    }
+}
+
+impl<A: Allocator> ToHex for $name<A> {
     fn to_hex(&self) -> String {
         self.get_ref().to_hex()
     }
@@ -299,40 +405,40 @@ wrapper_impl!(EdPoint)
 
 
 #[doc(hidden)]
-trait ScalarMul<P> {
-    fn mul(&self, lhs: &Scalar) -> P;
+trait ScalarMul<A, P> {
+    fn mul(&self, lhs: &Scalar<A>) -> P;
 }
 
-impl ScalarMul<MontPoint> for MontPoint {
-    fn mul(&self, lhs: &Scalar) -> MontPoint {
+impl<A: Allocator> ScalarMul<A, MontPoint<A>> for MontPoint<A> {
+    fn mul(&self, lhs: &Scalar<A>) -> MontPoint<A> {
         mont::scalar_mult(lhs, self)
     }
 }
 
-impl ScalarMul<EdPoint> for EdPoint {
-    fn mul(&self, lhs: &Scalar) -> EdPoint {
+impl<A: Allocator> ScalarMul<A, EdPoint<A>> for EdPoint<A> {
+    fn mul(&self, lhs: &Scalar<A>) -> EdPoint<A> {
         let p = GroupElem::unpack(self).unwrap();
         p.scalar_mult(lhs).pack()
     }
 }
 
-impl<S, R: ScalarMul<S>> Mul<R, S> for Scalar {
+impl<A: Allocator, S, R: ScalarMul<A, S>> Mul<R, S> for Scalar<A> {
     /// Multiply scalar with point.
     fn mul(&self, other: &R) -> S {
         other.mul(self)
     }
 }
 
-impl Mul<Scalar, MontPoint> for MontPoint {
+impl<A: Allocator> Mul<Scalar<A>, MontPoint<A>> for MontPoint<A> {
     /// Multiply point with scalar.
-    fn mul(&self, other: &Scalar) -> MontPoint {
+    fn mul(&self, other: &Scalar<A>) -> MontPoint<A> {
         mont::scalar_mult(other, self)
     }
 }
 
-impl Mul<Scalar, EdPoint> for EdPoint {
+impl<A: Allocator> Mul<Scalar<A>, EdPoint<A>> for EdPoint<A> {
     /// Multiply point with scalar.
-    fn mul(&self, other: &Scalar) -> EdPoint {
+    fn mul(&self, other: &Scalar<A>) -> EdPoint<A> {
         let p = GroupElem::unpack(self).unwrap();
         p.scalar_mult(other).pack()
     }
@@ -343,13 +449,14 @@ impl Mul<Scalar, EdPoint> for EdPoint {
 mod tests {
     use ed::GroupElem;
     use mont;
+    use sbuf::DefaultAllocator;
 
 
     #[test]
     fn test_wrappers_basic() {
         let (pkm1, sk) = mont::keypair();
-        let bpe = GroupElem::base().pack();
-        let bpm = GroupElem::base().to_mont();
+        let bpe = GroupElem::<DefaultAllocator>::base().pack();
+        let bpm = GroupElem::<DefaultAllocator>::base().to_mont();
 
         let pkm2 = sk * bpm;
         assert!(pkm1 == pkm2);

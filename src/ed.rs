@@ -5,6 +5,7 @@ use std::fmt::{Show, Formatter, Result};
 
 use bytes::{B416, Bytes, EdPoint, MontPoint, Scalar, Uniformity};
 use fe::FieldElem;
+use sbuf::{Allocator, DefaultAllocator};
 
 
 static BASEX: [u8, ..52] = [
@@ -14,7 +15,8 @@ static BASEX: [u8, ..52] = [
     0x54, 0xf3, 0x7f, 0xf5, 0xc7, 0x3e, 0xc0, 0x44,
     0x9f, 0x36, 0x46, 0xcd, 0x5f, 0x6e, 0x32, 0x1c,
     0x63, 0xc0, 0x18, 0x02, 0x30, 0x43, 0x14, 0x14,
-    0x05, 0x49, 0x33, 0x1a];
+    0x05, 0x49, 0x33, 0x1a
+];
 
 static BASEY: [u8, ..52] = [
     0x22, 0, 0, 0, 0, 0, 0, 0,
@@ -23,7 +25,8 @@ static BASEY: [u8, ..52] = [
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0];
+    0, 0, 0, 0
+];
 
 static BASEZ: [u8, ..52] = [
     0x01, 0, 0, 0, 0, 0, 0, 0,
@@ -32,7 +35,8 @@ static BASEZ: [u8, ..52] = [
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0];
+    0, 0, 0, 0
+];
 
 static BASET: [u8, ..52] = [
     0xa7, 0x3e, 0x10, 0x61, 0x84, 0x72, 0xa1, 0x29,
@@ -41,7 +45,8 @@ static BASET: [u8, ..52] = [
     0x3c, 0x51, 0xfe, 0x9a, 0x8e, 0x56, 0x88, 0x21,
     0x27, 0x41, 0x53, 0x43, 0xb9, 0xa8, 0xb2, 0xbe,
     0x29, 0x8d, 0x49, 0x47, 0x60, 0xec, 0xb0, 0xaa,
-    0xac, 0xb2, 0xcf, 0x3a];
+    0xac, 0xb2, 0xcf, 0x3a
+];
 
 static B1: [u8, ..52] = [
     0x01, 0, 0, 0, 0, 0, 0, 0,
@@ -50,7 +55,8 @@ static B1: [u8, ..52] = [
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0];
+    0, 0, 0, 0
+];
 
 static BMINUS1: [u8, ..52] = [
     0xee, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -59,7 +65,8 @@ static BMINUS1: [u8, ..52] = [
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0x3f];
+    0xff, 0xff, 0xff, 0x3f
+];
 
 static EDD: [u8, ..52] = [
     0x21, 0x0e, 0, 0, 0, 0, 0, 0,
@@ -68,7 +75,8 @@ static EDD: [u8, ..52] = [
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0];
+    0, 0, 0, 0
+];
 
 static ELLIGATORA: [u8, ..52] = [
     0xcd, 0xf1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -77,7 +85,8 @@ static ELLIGATORA: [u8, ..52] = [
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0x3f];
+    0xff, 0xff, 0xff, 0x3f
+];
 
 static ELLIGATORB: [u8, ..52] = [
     0x21, 0x0e, 0, 0, 0, 0, 0, 0,
@@ -86,7 +95,8 @@ static ELLIGATORB: [u8, ..52] = [
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0];
+    0, 0, 0, 0
+];
 
 static ELLIGATORAD: [u8, ..52] = [
     0xcf, 0xf1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -95,7 +105,8 @@ static ELLIGATORAD: [u8, ..52] = [
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0x3f];
+    0xff, 0xff, 0xff, 0x3f
+];
 
 
 /// A group element i.e. a point in Edwards representation.
@@ -103,21 +114,21 @@ static ELLIGATORAD: [u8, ..52] = [
 /// It handle various group elements operations such as scalar
 /// multiplications, point additions, Elligator point mapping,
 /// key pairs generation,...
-pub struct GroupElem {
-  x: FieldElem,
-  y: FieldElem,
-  z: FieldElem,
-  t: FieldElem
+pub struct GroupElem<A = DefaultAllocator> {
+  x: FieldElem<A>,
+  y: FieldElem<A>,
+  z: FieldElem<A>,
+  t: FieldElem<A>
 }
 
-impl GroupElem {
+impl<A: Allocator> GroupElem<A> {
     /// Return a new group element with all its coordinates set to zero.
-    pub fn new() -> GroupElem {
+    pub fn new() -> GroupElem<A> {
         GroupElem::zero()
     }
 
     /// Return a group element with all its coordinates set to zero.
-    pub fn zero() -> GroupElem {
+    pub fn zero() -> GroupElem<A> {
         GroupElem {
             x: FieldElem::zero(),
             y: FieldElem::zero(),
@@ -127,7 +138,7 @@ impl GroupElem {
     }
 
     /// Return the neutral point.
-    pub fn neutral() -> GroupElem {
+    pub fn neutral() -> GroupElem<A> {
          GroupElem {
             x: FieldElem::zero(),
             y: FieldElem::one(),
@@ -137,11 +148,11 @@ impl GroupElem {
     }
 
     /// Return the base point.
-    pub fn base() -> GroupElem {
-        let bx: B416 = Bytes::from_bytes(BASEX).unwrap();
-        let by: B416 = Bytes::from_bytes(BASEY).unwrap();
-        let bz: B416 = Bytes::from_bytes(BASEZ).unwrap();
-        let bt: B416 = Bytes::from_bytes(BASET).unwrap();
+    pub fn base() -> GroupElem<A> {
+        let bx: B416<A> = Bytes::from_bytes(BASEX).unwrap();
+        let by: B416<A> = Bytes::from_bytes(BASEY).unwrap();
+        let bz: B416<A> = Bytes::from_bytes(BASEZ).unwrap();
+        let bt: B416<A> = Bytes::from_bytes(BASET).unwrap();
 
         GroupElem {
             x: FieldElem::unpack(&bx),
@@ -151,31 +162,31 @@ impl GroupElem {
          }
     }
 
-    fn b1() -> B416 {
+    fn b1() -> B416<A> {
         Bytes::from_bytes(B1).unwrap()
     }
 
-    fn bminus1() -> B416 {
+    fn bminus1() -> B416<A> {
         Bytes::from_bytes(BMINUS1).unwrap()
     }
 
-    fn edd() -> FieldElem {
-        let bedd: B416 = Bytes::from_bytes(EDD).unwrap();
+    fn edd() -> FieldElem<A> {
+        let bedd: B416<A> = Bytes::from_bytes(EDD).unwrap();
         FieldElem::unpack(&bedd)
     }
 
-    fn elligatora() -> FieldElem {
-        let bea: B416 = Bytes::from_bytes(ELLIGATORA).unwrap();
+    fn elligatora() -> FieldElem<A> {
+        let bea: B416<A> = Bytes::from_bytes(ELLIGATORA).unwrap();
         FieldElem::unpack(&bea)
     }
 
-    fn elligatorb() -> FieldElem {
-        let beb: B416 = Bytes::from_bytes(ELLIGATORB).unwrap();
+    fn elligatorb() -> FieldElem<A> {
+        let beb: B416<A> = Bytes::from_bytes(ELLIGATORB).unwrap();
         FieldElem::unpack(&beb)
     }
 
-    fn elligatorad() -> FieldElem {
-        let bead: B416 = Bytes::from_bytes(ELLIGATORAD).unwrap();
+    fn elligatorad() -> FieldElem<A> {
+        let bead: B416<A> = Bytes::from_bytes(ELLIGATORAD).unwrap();
         FieldElem::unpack(&bead)
     }
 
@@ -188,9 +199,9 @@ impl GroupElem {
     /// Unpack a Curve41417 point in Edwards representation from its
     /// `bytes` representation. `bytes` must hold a packed point wrapped
     /// in `EdPoint`, usually a previous result obtained from `pack()`.
-    pub fn unpack(bytes: &EdPoint) -> Option<GroupElem> {
+    pub fn unpack(bytes: &EdPoint<A>) -> Option<GroupElem<A>> {
         let b = bytes.get_ref();
-        let mut r = GroupElem::new();
+        let mut r: GroupElem<A> = GroupElem::new();
 
         // Unpack y, top 2 bits are discarded in FieldElem::unpack().
         r.y = FieldElem::unpack(b);
@@ -217,7 +228,7 @@ impl GroupElem {
         // Choose between x and -x
         let mut nrx = -r.x;
         let parity = r.x.parity_bit();
-        r.x.cswap(((*b.get(51) >> 7) ^ parity) as i64, &mut nrx);
+        r.x.cswap(((b[51] >> 7) ^ parity) as i64, &mut nrx);
         r.propagate_from_xy();
 
         match success {
@@ -229,7 +240,7 @@ impl GroupElem {
     /// Pack a group elem's coordinate `y` along with a sign bit taken from
     /// its `x` coordinate. This packed point may be unpacked with
     /// `unpack()`.
-    pub fn pack(&self) -> EdPoint {
+    pub fn pack(&self) -> EdPoint<A> {
         // Pack y
         let zi = self.z.inv();
         let tx = self.x * zi;
@@ -237,7 +248,7 @@ impl GroupElem {
         let mut r = ty.pack();
 
         // Sign(x): same as EdDSA25519
-        *r.get_mut(51) = *r.get(51) ^ (tx.parity_bit() << 7);
+        r[51] = r[51] ^ (tx.parity_bit() << 7);
         EdPoint(r)
     }
 
@@ -245,7 +256,7 @@ impl GroupElem {
         // Nothing to do.
     }
 
-    fn cswap(&mut self, cond: i64, other: &mut GroupElem) {
+    fn cswap(&mut self, cond: i64, other: &mut GroupElem<A>) {
         self.x.cswap(cond, &mut other.x);
         self.y.cswap(cond, &mut other.y);
         self.z.cswap(cond, &mut other.z);
@@ -262,12 +273,12 @@ impl GroupElem {
     /// want the bits of the scalar to be modified before the scalar
     /// multiplication. Whereas a `ScalarElem` may automatically be reduced
     /// `mod L` before any scalar multiplication takes place.
-    pub fn scalar_mult(&self, n: &Scalar) -> GroupElem {
+    pub fn scalar_mult(&self, n: &Scalar<A>) -> GroupElem<A> {
         let mut p = self.clone();
-        let mut q = GroupElem::neutral();
+        let mut q: GroupElem<A> = GroupElem::neutral();
 
         for i in range(0u, 415).rev() {
-            let c = ((*n.get(i / 8) >> (i & 7)) & 1) as i64;
+            let c = ((n[i / 8] >> (i & 7)) & 1) as i64;
             q.cswap(c, &mut p);
             p = p + q;
             q = q + q;
@@ -278,7 +289,7 @@ impl GroupElem {
 
     /// Return point `q` such that `q=8.self` where `8` is curve's cofactor
     /// applied to this point's instance.
-    pub fn scalar_mult_cofactor(&self) -> GroupElem {
+    pub fn scalar_mult_cofactor(&self) -> GroupElem<A> {
         let mut q = *self + *self;
         q = q + q;
         q = q + q;
@@ -289,7 +300,7 @@ impl GroupElem {
     /// to the base point `BP`. Note that `n` is not clamped by this method
     /// before the multiplication. Calling this method is equivalent to calling
     /// `GroupElem::base().scalar_mult(&n)`.
-    pub fn scalar_mult_base(n: &Scalar) -> GroupElem {
+    pub fn scalar_mult_base(n: &Scalar<A>) -> GroupElem<A> {
         GroupElem::base().scalar_mult(n)
     }
 
@@ -297,27 +308,30 @@ impl GroupElem {
     /// scalar values and `p1` and `p2` are group elements. Note that the
     /// values of `n1` and `n2` are not clamped by this method before their
     /// multiplications.
-    pub fn double_scalar_mult(n1: &Scalar, p1: &GroupElem,
-                              n2: &Scalar, p2: &GroupElem) -> GroupElem {
+    pub fn double_scalar_mult(n1: &Scalar<A>, p1: &GroupElem<A>,
+                              n2: &Scalar<A>, p2: &GroupElem<A>)
+                              -> GroupElem<A> {
         p1.scalar_mult(n1) + p2.scalar_mult(n2)
     }
 
     /// Generate keypair `(pk, sk)` such that `pk=sk.BP` with secret scalar
     /// `sk` appropriately clamped and `pk` the resulting public key.
-    pub fn keypair() -> (GroupElem, Scalar) {
-        let mut sk: B416 = Bytes::new_rand();
+    pub fn keypair() -> (GroupElem<A>, Scalar<A>) {
+        let mut sk: B416<A> = Bytes::new_rand();
         sk.clamp_41417();
-        let sk_val = Scalar(sk);
+        let sk_val: Scalar<A> = Scalar(sk);
         let pk = GroupElem::scalar_mult_base(&sk_val);
         (pk, sk_val)
     }
 
     /// Convert this point's coordinates to Montgomery's x-coordinate.
-    /// This result may be used as input point in `curve41417::mont` scalar
-    /// multiplications.
-    pub fn to_mont(&self) -> MontPoint {
+    /// This result may be used as input point in`mont`
+    /// scalar multiplications.
+    pub fn to_mont(&self) -> MontPoint<A> {
         let zi = self.z.inv();
         let ty = self.y * zi;
+
+        // u = (1 + y) / (1 - y)
         let mut num = FieldElem::one() + ty;
         let mut den = FieldElem::one() - ty;
         den = den.inv();
@@ -329,8 +343,8 @@ impl GroupElem {
     // mod L if the input string r was a 52 bytes random string? At least as
     // specified in ed25519-20110926.pdf a 64 bytes input should provide
     // enough uniformity.
-    fn elligator_map(n: &FieldElem) -> Option<GroupElem> {
-        let mut p = GroupElem::new();
+    fn elligator_map(n: &FieldElem<A>) -> Option<GroupElem<A>> {
+        let mut p: GroupElem<A> = GroupElem::new();
 
         // The input n is not defined for {-1, 1}
         let r = n.pack();
@@ -396,15 +410,15 @@ impl GroupElem {
 
     /// Map a byte-string to a curve point. Return a valid group element
     /// if `n` produces to a well-defined point.
-    pub fn elligator_map_from_bytes<T: Bytes + Uniformity>(n: &T)
-                                                           -> Option<GroupElem> {
+    pub fn elligator_map_from_bytes<T: Bytes + Uniformity>(
+        n: &T) -> Option<GroupElem<A>> {
         GroupElem::elligator_map(&FieldElem::reduce_weak_from_bytes(n))
     }
 }
 
-impl Add<GroupElem, GroupElem> for GroupElem {
+impl<A: Allocator> Add<GroupElem<A>, GroupElem<A>> for GroupElem<A> {
     /// Add points.
-    fn add(&self, other: &GroupElem) -> GroupElem {
+    fn add(&self, other: &GroupElem<A>) -> GroupElem<A> {
         // 2008/522.pdf section 3.1 (a=1)
         let a = self.x * other.x;
         let b = self.y * other.y;
@@ -428,9 +442,9 @@ impl Add<GroupElem, GroupElem> for GroupElem {
     }
 }
 
-impl Neg<GroupElem> for GroupElem {
+impl<A: Allocator> Neg<GroupElem<A>> for GroupElem<A> {
     /// Negate point.
-    fn neg(&self) -> GroupElem {
+    fn neg(&self) -> GroupElem<A> {
         let mut r = self.clone();
         r.x = -r.x;
         r.t = r.x * r.y;
@@ -438,25 +452,26 @@ impl Neg<GroupElem> for GroupElem {
     }
 }
 
-impl Mul<Scalar, GroupElem> for GroupElem {
+impl<A: Allocator> Mul<Scalar<A>, GroupElem<A>> for GroupElem<A> {
     /// Multiply point `self` with scalar value `other`. Note that
     /// currently it is not possible to symmetrically overload the `*`
     /// operator of a scalar value to support `scalar * point` when
     /// `point` is a `GroupElem`.
-    fn mul(&self, other: &Scalar) -> GroupElem {
+    fn mul(&self, other: &Scalar<A>) -> GroupElem<A> {
         self.scalar_mult(other)
     }
 }
 
-impl Drop for GroupElem {
+#[unsafe_destructor]
+impl<A: Allocator> Drop for GroupElem<A> {
     /// Before being released point's coordinates are zeroed-out.
     fn drop(&mut self) {
         self.cleanup();
     }
 }
 
-impl Clone for GroupElem {
-    fn clone(&self) -> GroupElem {
+impl<A: Allocator> Clone for GroupElem<A> {
+    fn clone(&self) -> GroupElem<A> {
         GroupElem {
             x: self.x.clone(),
             y: self.y.clone(),
@@ -466,51 +481,51 @@ impl Clone for GroupElem {
     }
 }
 
-impl Default for GroupElem {
+impl<A: Allocator> Default for GroupElem<A> {
     /// By default return the neutral point.
-    fn default() -> GroupElem {
+    fn default() -> GroupElem<A> {
         GroupElem::neutral()
     }
 }
 
-impl Show for GroupElem {
+impl<A: Allocator> Show for GroupElem<A> {
     /// Format as hex-string.
     fn fmt(&self, f: &mut Formatter) -> Result {
         self.pack().fmt(f)
     }
 }
 
-impl ToHex for GroupElem {
+impl<A: Allocator> ToHex for GroupElem<A> {
     fn to_hex(&self) -> String {
         self.pack().to_hex()
     }
 }
 
-impl PartialEq for GroupElem {
+impl<A: Allocator> PartialEq for GroupElem<A> {
     /// Constant-time points equality comparison.
-    fn eq(&self, other: &GroupElem) -> bool {
+    fn eq(&self, other: &GroupElem<A>) -> bool {
         self.pack().unwrap() == other.pack().unwrap()
     }
 }
 
-impl Eq for GroupElem {
+impl<A: Allocator> Eq for GroupElem<A> {
 }
 
 
 #[cfg(test)]
 mod tests {
-    extern crate test;
-    use self::test::Bencher;
+    use test::Bencher;
 
     use bytes::{B416, B512, B832, Bytes, Scalar};
     use ed;
     use mont;
+    use sbuf::DefaultAllocator;
 
 
     #[test]
     fn test_dh_rand() {
-        let (pk1, sk1) = ed::GroupElem::keypair();
-        let (pk2, sk2) = ed::GroupElem::keypair();
+        let (pk1, sk1) = ed::GroupElem::<DefaultAllocator>::keypair();
+        let (pk2, sk2) = ed::GroupElem::<DefaultAllocator>::keypair();
 
         let ssk1 = pk2 * sk1;
         let ssk2 = pk1 * sk2;
@@ -520,12 +535,12 @@ mod tests {
 
     #[test]
     fn test_ops() {
-        let mut b = ed::GroupElem::base();
+        let mut b = ed::GroupElem::<DefaultAllocator>::base();
         for _ in range(0u, 10) {
-            b = b + ed::GroupElem::base();
+            b = b + ed::GroupElem::<DefaultAllocator>::base();
         }
 
-        let nb = -ed::GroupElem::base();
+        let nb = -ed::GroupElem::<DefaultAllocator>::base();
         for _ in range(0u, 10) {
             b = b + nb;
         }
@@ -535,11 +550,11 @@ mod tests {
 
     #[test]
     fn test_scalar_cofactor() {
-        let n: B416 = Bytes::new_rand();
-        let mut cofactor: B416 = Bytes::new_zero();
-        *cofactor.get_mut(0) = 0x8;
+        let n: B416<DefaultAllocator> = Bytes::new_rand();
+        let mut cofactor: B416<DefaultAllocator> = Bytes::new_zero();
+        cofactor[0] = 0x8;
 
-        let bp = ed::GroupElem::base();
+        let bp = ed::GroupElem::<DefaultAllocator>::base();
         let q = bp * Scalar(n);
         let r = q.scalar_mult_cofactor();
 
@@ -549,14 +564,14 @@ mod tests {
         }
         assert!(s == r);
 
-        s = q * Scalar(cofactor);
+        s = q * Scalar::<DefaultAllocator>(cofactor);
         assert!(s == r);
     }
 
     #[test]
     fn test_pack() {
-        let bp = ed::GroupElem::base();
-        let n = Scalar(Bytes::new_rand());
+        let bp = ed::GroupElem::<DefaultAllocator>::base();
+        let n = Scalar::<DefaultAllocator>(Bytes::new_rand());
 
         let q = bp * n;
         let qs = q.pack();
@@ -578,18 +593,17 @@ mod tests {
 
     #[test]
     fn test_ed_to_mont() {
-        let bp = ed::GroupElem::base();
-        let n = Scalar(Bytes::new_rand());
+        let bp = ed::GroupElem::<DefaultAllocator>::base();
+        let mut b1: B416<DefaultAllocator> = Bytes::new_rand();
+        b1.clamp_41417();
+        let n1 = Scalar(b1);
 
-        let m1 = mont::scalar_mult_base(&n);
+        let m1 = mont::scalar_mult_base(&n1);
+        let e1 = bp * n1;
+        let m11 = e1.to_mont();
 
-        let mut nn = n.get_ref().clone();
-        nn.clamp_41417();
-        let e = bp * Scalar(nn);
-        let m2 = e.to_mont();
-
-        assert!(m1 == m2);
-        assert!(m1.unwrap() == m2.unwrap());
+        assert!(m1 == m11);
+        assert!(m1.unwrap() == m11.unwrap());
     }
 
     #[test]
@@ -651,13 +665,13 @@ mod tests {
             0xaf, 0xdb, 0xc3, 0x37, 0xb9, 0x9f, 0x31, 0x15,
             0xb2, 0xbb, 0x1a, 0x0f];
 
-        let nn1: B512 = Bytes::from_bytes(n1).unwrap();
-        let xx1: B416 = Bytes::from_bytes(x1).unwrap();
-        let yy1: B416 = Bytes::from_bytes(y1).unwrap();
+        let nn1: B512<DefaultAllocator> = Bytes::from_bytes(n1).unwrap();
+        let xx1: B416<DefaultAllocator> = Bytes::from_bytes(x1).unwrap();
+        let yy1: B416<DefaultAllocator> = Bytes::from_bytes(y1).unwrap();
 
-        let nn2: B832 = Bytes::from_bytes(n2).unwrap();
-        let xx2: B416 = Bytes::from_bytes(x2).unwrap();
-        let yy2: B416 = Bytes::from_bytes(y2).unwrap();
+        let nn2: B832<DefaultAllocator> = Bytes::from_bytes(n2).unwrap();
+        let xx2: B416<DefaultAllocator> = Bytes::from_bytes(x2).unwrap();
+        let yy2: B416<DefaultAllocator> = Bytes::from_bytes(y2).unwrap();
 
         let p1 = ed::GroupElem::elligator_map_from_bytes(&nn1).unwrap();
         assert!(xx1 == p1.x.pack());
@@ -687,9 +701,9 @@ mod tests {
             0x16, 0x49, 0xe8, 0xca, 0x32, 0x72, 0x1d, 0xba,
             0x47, 0x29, 0xa5, 0x09];
 
-        let mut scn: B416 = Bytes::from_bytes(n).unwrap();
-        let scr: B416 = Bytes::from_bytes(r).unwrap();
-        let bp = ed::GroupElem::base();
+        let mut scn: B416<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
+        let scr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
+        let bp = ed::GroupElem::<DefaultAllocator>::base();
 
         scn.clamp_41417();
         let q = bp * Scalar(scn);
@@ -699,8 +713,8 @@ mod tests {
 
     #[bench]
     fn bench_scalar_mult_base(b: &mut Bencher) {
-        let bp = ed::GroupElem::base();
-        let n = Scalar(Bytes::new_rand());
+        let bp = ed::GroupElem::<DefaultAllocator>::base();
+        let n = Scalar::<DefaultAllocator>(Bytes::new_rand());
         b.iter(|| {
             bp.scalar_mult(&n);
         })
@@ -708,8 +722,8 @@ mod tests {
 
     #[bench]
     fn bench_scalar_mult(b: &mut Bencher) {
-        let (pk, _) = ed::GroupElem::keypair();
-        let n = Scalar(Bytes::new_rand());
+        let (pk, _) = ed::GroupElem::<DefaultAllocator>::keypair();
+        let n = Scalar::<DefaultAllocator>(Bytes::new_rand());
         b.iter(|| {
             pk.scalar_mult(&n);
         })

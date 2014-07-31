@@ -6,7 +6,7 @@ use std::io::extensions;
 use std::rand::{Rand, Rng};
 
 use bytes::{B416, B832, Bytes, Scalar, Uniformity};
-use sbuf::{DefaultAllocator, SBuf};
+use sbuf::{Allocator, DefaultAllocator, SBuf};
 use utils;
 
 
@@ -21,40 +21,41 @@ static L: [u8, ..52] = [
   0x3c, 0xeb, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-  0xff, 0xff, 0xff, 0x07];
+  0xff, 0xff, 0xff, 0x07
+];
 
 // LD = 2^5 * d
 static LD: [u8, ..27] = [
   0xe0, 0x10, 0x2a, 0xdf, 0x43, 0xcb, 0x31, 0x9e,
   0xfc, 0x1c, 0x86, 0x53, 0xea, 0x98, 0x7f, 0x1c,
   0x92, 0xa9, 0xfb, 0xf3, 0x11, 0x66, 0x7d, 0xdb,
-  0x66, 0x98, 0x02];
+  0x66, 0x98, 0x02
+];
 
 
 /// Scalar element used in scalar operations.
 ///
 /// Provide commons Curve41417 scalar operations computed `mod L`, where
 /// `L` is the order of the base point.
-#[deriving(Clone)]
-pub struct ScalarElem {
-    elem: SBuf<DefaultAllocator, i64>
+pub struct ScalarElem<A = DefaultAllocator> {
+    elem: SBuf<A, i64>
 }
 
-impl ScalarElem {
+impl<A: Allocator> ScalarElem<A> {
     // Return a new scalar element with its value set to `0`.
-    fn new_zero() -> ScalarElem {
+    fn new_zero() -> ScalarElem<A> {
         ScalarElem::zero()
     }
 
     /// Generate a new random `ScalarElem` between `[0, L-1]`, its value is
     /// not clamped. Use urandom as PRNG.
-    pub fn new_rand() -> ScalarElem {
+    pub fn new_rand() -> ScalarElem<A> {
         let rng = &mut utils::urandom_rng();
         Rand::rand(rng)
     }
 
     /// Return scalar value representing `0`.
-    pub fn zero() -> ScalarElem {
+    pub fn zero() -> ScalarElem<A> {
         ScalarElem {
             elem: SBuf::new_zero(SCE_SIZE)
         }
@@ -63,21 +64,21 @@ impl ScalarElem {
     // Return a reference to the limb at index `index`. Fails if
     // `index` is out of bounds.
     #[doc(hidden)]
-    pub fn get<'a>(&'a self, index: uint) -> &'a i64 {
+    pub fn get(&self, index: uint) -> &i64 {
         self.elem.get(index)
     }
 
     // Return a mutable reference to the limb at index `index`. Fails
     // if `index` is out of bounds.
     #[doc(hidden)]
-    pub fn get_mut<'a>(&'a mut self, index: uint) -> &'a mut i64 {
+    pub fn get_mut(&mut self, index: uint) -> &mut i64 {
         self.elem.get_mut(index)
     }
 
     // Conditionally swap this scalar element with `other`. `cond` serves
     // as condition and must be `0` or `1` strictly. Values are swapped iff
     // `cond == 1`.
-    fn cswap(&mut self, cond: i64, other: &mut ScalarElem) {
+    fn cswap(&mut self, cond: i64, other: &mut ScalarElem<A>) {
         utils::bytes_cswap::<i64>(cond,
                                   self.elem.as_mut_slice(),
                                   other.elem.as_mut_slice());
@@ -89,18 +90,18 @@ impl ScalarElem {
         let mut carry: i64;
 
         for i in range(0u, top) {
-            *self.get_mut(i) += 1_i64 << 8;
-            carry = *self.get(i) >> 8;
-            *self.get_mut(i + 1) += carry - 1;
-            *self.get_mut(i) -= carry << 8;
+            (*self)[i] += 1_i64 << 8;
+            carry = (*self)[i] >> 8;
+            self[i + 1] += carry - 1;
+            self[i] -= carry << 8;
         }
 
-        *self.get_mut(top) += 1_i64 << 8;
-        carry = *self.get(top) >> 8;
+        self[top] += 1_i64 << 8;
+        carry = (*self)[top] >> 8;
         for i in range(0u, 27) {
-            *self.get_mut(top - 51 + i) += (carry - 1) * (LD[i] as i64);
+            self[top - 51 + i] += (carry - 1) * (LD[i] as i64);
         }
-        *self.get_mut(top) -= carry << 8;
+        self[top] -= carry << 8;
     }
 
     // Reduce mod 2^416 - 2^5 * d and put limbs between [0, 2^16-1] through
@@ -110,25 +111,25 @@ impl ScalarElem {
         assert!(n.len() > 52);
         assert!(n.len() <= 104);
 
-        let mut t: SBuf<DefaultAllocator, i64> = SBuf::new_zero(78);
+        let mut t: SBuf<A, i64> = SBuf::new_zero(78);
         for i in range(0u, 52) {
-            *t.get_mut(i) = n[i];
+            t[i] = n[i];
         }
 
         for i in range(52u, n.len()) {
             for j in range(0u, 27) {
-                *t.get_mut(i + j - 52) += n[i] * (LD[j] as i64);
+                t[i + j - 52] += n[i] * (LD[j] as i64);
             }
         }
 
         for i in range(52u, n.len() - 26) {
             for j in range(0u, 27) {
-                *t.get_mut(i + j - 52) += *t.get(i) * (LD[j] as i64);
+                t[i + j - 52] += t[i] * (LD[j] as i64);
             }
         }
 
         for i in range(0u, 52) {
-            *self.get_mut(i) = *t.get(i);
+            self[i] = t[i];
         }
 
         self.carry();
@@ -142,41 +143,41 @@ impl ScalarElem {
         // Eliminate multiples of 2^411
         let mut carry: i64 = 0;
         for i in range(0u, 52) {
-            *self.get_mut(i) += carry - (*self.get(51) >> 3) * (L[i] as i64);
-            carry = *self.get(i) >> 8;
-            *self.get_mut(i) &= 0xff;
+            self[i] += carry - ((*self)[51] >> 3) * (L[i] as i64);
+            carry = (*self)[i] >> 8;
+            self[i] &= 0xff;
         }
 
         // Substract L a last time in case n is in [L, 2^411-1]
-        let mut m = ScalarElem::new_zero();
+        let mut m: ScalarElem<A> = ScalarElem::new_zero();
         carry = 0;
         for i in range(0u, 52) {
-            *m.get_mut(i) = *self.get(i) + carry - (L[i] as i64);
-            carry = *m.get(i) >> 8;
-            *m.get_mut(i) &= 0xff;
+            m[i] = (*self)[i] + carry - (L[i] as i64);
+            carry = m[i] >> 8;
+            m[i] &= 0xff;
         }
         self.cswap(1 - (carry & 1), &mut m);
     }
 
-    fn unpack_wo_reduce<T: Bytes>(n: &T) -> ScalarElem {
-        let mut r = ScalarElem::new_zero();
+    fn unpack_wo_reduce<T: Bytes>(n: &T) -> ScalarElem<A> {
+        let mut r: ScalarElem<A> = ScalarElem::new_zero();
 
         // Note: would be great to also check/assert that n is in [0, L - 1].
         for i in range(0u, 52) {
-            *r.get_mut(i) = *n.get(i) as i64;
+            r[i] = (*n)[i] as i64;
         }
         r
     }
 
-    fn unpack_w_reduce<T: Bytes>(n: &T) -> ScalarElem {
+    fn unpack_w_reduce<T: Bytes>(n: &T) -> ScalarElem<A> {
         let l = n.as_bytes().len();
-        let mut t: SBuf<DefaultAllocator, i64> = SBuf::new_zero(l);
+        let mut t: SBuf<A, i64> = SBuf::new_zero(l);
 
         for i in range(0u, l) {
-            *t.get_mut(i) = *n.get(i) as i64;
+            t[i] = (*n)[i] as i64;
         }
 
-        let mut r = ScalarElem::new_zero();
+        let mut r: ScalarElem<A> = ScalarElem::new_zero();
         r.reduce_weak(t.as_slice());
         r
     }
@@ -192,7 +193,7 @@ impl ScalarElem {
     /// In any case it is not until its result is packed back to a byte
     /// representation (through `pack()` method) that it will be reduced to
     /// its canonical form.
-    pub fn unpack<T: Bytes>(n: &T) -> Option<ScalarElem> {
+    pub fn unpack<T: Bytes>(n: &T) -> Option<ScalarElem<A>> {
         let l = n.as_bytes().len();
 
         match l {
@@ -203,77 +204,97 @@ impl ScalarElem {
     }
 
     /// Pack the current scalar value reduced `mod L`.
-    pub fn pack(&self) -> Scalar {
+    pub fn pack(&self) -> Scalar<A> {
         let mut t = self.clone();
         t.reduce();
 
-        let mut b: B416 = Bytes::new_zero();
+        let mut b: B416<A> = Bytes::new_zero();
         for i in range(0u, 52) {
-            *b.get_mut(i) = (*t.get(i) & 0xff) as u8;
+            b[i] = (t[i] & 0xff) as u8;
         }
         Scalar(b)
     }
 
     /// Pack scalar value `n` reduced `n mod L`.
-    pub fn reduce_from_bytes<T: Bytes + Uniformity>(n: &T) -> Scalar {
+    pub fn reduce_from_bytes<T: Bytes + Uniformity>(n: &T) -> Scalar<A> {
         ScalarElem::unpack(n).unwrap().pack()
     }
 }
 
-impl Add<ScalarElem, ScalarElem> for ScalarElem {
+impl<A: Allocator> Clone for ScalarElem<A> {
+    fn clone(&self) -> ScalarElem<A> {
+        ScalarElem {
+            elem: self.elem.clone()
+        }
+    }
+}
+
+impl<A: Allocator> Index<uint, i64> for ScalarElem<A> {
+    fn index(&self, index: &uint) -> &i64 {
+        self.get(*index)
+    }
+}
+
+impl<A: Allocator> IndexMut<uint, i64> for ScalarElem<A> {
+    fn index_mut(&mut self, index: &uint) -> &mut i64 {
+        self.get_mut(*index)
+    }
+}
+
+impl<A: Allocator> Add<ScalarElem<A>, ScalarElem<A>> for ScalarElem<A> {
     /// Add scalars.
-    fn add(&self, other: &ScalarElem) -> ScalarElem {
+    fn add(&self, other: &ScalarElem<A>) -> ScalarElem<A> {
         let mut r = self.clone();
         for i in range(0u, self.len()) {
-            *r.get_mut(i) += *other.get(i);
+            r[i] += other[i];
         }
         r
     }
 }
 
-impl Sub<ScalarElem, ScalarElem> for ScalarElem {
+impl<A: Allocator> Sub<ScalarElem<A>, ScalarElem<A>> for ScalarElem<A> {
     /// Substract scalars.
-    fn sub(&self, other: &ScalarElem) -> ScalarElem {
+    fn sub(&self, other: &ScalarElem<A>) -> ScalarElem<A> {
         let mut r = self.clone();
         for i in range(0u, self.len()) {
-            *r.get_mut(i) -= *other.get(i);
+            r[i] -= other[i];
         }
         r
     }
 }
 
-impl Neg<ScalarElem> for ScalarElem {
+impl<A: Allocator> Neg<ScalarElem<A>> for ScalarElem<A> {
     /// Negate scalar.
-    fn neg(&self) -> ScalarElem {
+    fn neg(&self) -> ScalarElem<A> {
         ScalarElem::zero() - *self
     }
 }
 
-impl Mul<ScalarElem, ScalarElem> for ScalarElem {
+impl<A: Allocator> Mul<ScalarElem<A>, ScalarElem<A>> for ScalarElem<A> {
     /// Multiply scalars.
-    fn mul(&self, other: &ScalarElem) -> ScalarElem {
-        let mut t: SBuf<DefaultAllocator, i64> = SBuf::new_zero(103);
+    fn mul(&self, other: &ScalarElem<A>) -> ScalarElem<A> {
+        let mut t: SBuf<A, i64> = SBuf::new_zero(103);
 
         for i in range(0u, 52) {
             for j in range(0u, 52) {
-                *t.get_mut(i + j) += *self.get(i) * *other.get(j);
+                t[i + j] += self[i] * other[j];
             }
         }
 
-        let mut r = ScalarElem::new_zero();
+        let mut r: ScalarElem<A> = ScalarElem::new_zero();
         r.reduce_weak(t.as_slice());
         r
     }
 }
 
-impl FromPrimitive for ScalarElem {
+impl<A: Allocator> FromPrimitive for ScalarElem<A> {
     #[allow(unused_variable)]
-    fn from_i64(n: i64) -> Option<ScalarElem> {
+    fn from_i64(n: i64) -> Option<ScalarElem<A>> {
         None
     }
 
-    fn from_u64(n: u64) -> Option<ScalarElem> {
-        let mut s: B416 = Bytes::new_zero();
+    fn from_u64(n: u64) -> Option<ScalarElem<A>> {
+        let mut s: B416<A> = Bytes::new_zero();
         extensions::u64_to_le_bytes(n, 8, |v| {
             for (sb, db) in v.iter().zip(s.as_mut_bytes().mut_iter()) {
                 *db = *sb;
@@ -283,47 +304,47 @@ impl FromPrimitive for ScalarElem {
     }
 }
 
-impl Default for ScalarElem {
+impl<A: Allocator> Default for ScalarElem<A> {
     /// Return the scalar value 0 as default.
-    fn default() -> ScalarElem {
+    fn default() -> ScalarElem<A> {
         ScalarElem::new_zero()
     }
 }
 
-impl Rand for ScalarElem {
+impl<A: Allocator> Rand for ScalarElem<A> {
     /// Generate a random `ScalarElem` between `[0, L-1]`, and its value
     /// is not clamped. Be sure to use a secure PRNG when calling this
     /// method. For instance `ScalarElem::new_rand()` uses urandom.
-    fn rand<R: Rng>(rng: &mut R) -> ScalarElem {
-        let b: B832 = Rand::rand(rng);
+    fn rand<R: Rng>(rng: &mut R) -> ScalarElem<A> {
+        let b: B832<A> = Rand::rand(rng);
         ScalarElem::unpack(&b).unwrap()
     }
 }
 
-impl Show for ScalarElem {
+impl<A: Allocator> Show for ScalarElem<A> {
     /// Format as hex-string.
     fn fmt(&self, f: &mut Formatter) -> Result {
         self.pack().fmt(f)
     }
 }
 
-impl ToHex for ScalarElem {
+impl<A: Allocator> ToHex for ScalarElem<A> {
     fn to_hex(&self) -> String {
         self.pack().to_hex()
     }
 }
 
-impl Eq for ScalarElem {
+impl<A: Allocator> Eq for ScalarElem<A> {
 }
 
-impl PartialEq for ScalarElem {
+impl<A: Allocator> PartialEq for ScalarElem<A> {
     /// Constant-time equality comparison.
-    fn eq(&self, other: &ScalarElem) -> bool {
+    fn eq(&self, other: &ScalarElem<A>) -> bool {
         self.pack() == other.pack()
     }
 }
 
-impl Collection for ScalarElem {
+impl<A: Allocator> Collection for ScalarElem<A> {
     fn len(&self) -> uint {
         self.elem.len()
     }
@@ -334,12 +355,13 @@ impl Collection for ScalarElem {
 mod tests {
     use bytes::{B416, B512, B832, Bytes};
     use sc::ScalarElem;
+    use sbuf::DefaultAllocator;
 
 
     #[test]
     fn test_ops_b416() {
-        let n1: B416 = Bytes::new_rand();
-        let a = ScalarElem::unpack(&n1).unwrap();
+        let n1: B416<DefaultAllocator> = Bytes::new_rand();
+        let a = ScalarElem::<DefaultAllocator>::unpack(&n1).unwrap();
 
         let apa = a + a;
         let aaa1 = a * apa;
@@ -355,8 +377,8 @@ mod tests {
 
     #[test]
     fn test_ops_b512() {
-        let n1: B512 = Bytes::new_rand();
-        let a = ScalarElem::unpack(&n1).unwrap();
+        let n1: B512<DefaultAllocator> = Bytes::new_rand();
+        let a = ScalarElem::<DefaultAllocator>::unpack(&n1).unwrap();
 
         let apa = a + a;
         let aaa1 = a * apa;
@@ -371,8 +393,8 @@ mod tests {
 
     #[test]
     fn test_ops_b832() {
-        let n1: B832 = Bytes::new_rand();
-        let a = ScalarElem::unpack(&n1).unwrap();
+        let n1: B832<DefaultAllocator> = Bytes::new_rand();
+        let a = ScalarElem::<DefaultAllocator>::unpack(&n1).unwrap();
 
         let apa = a + a;
         let aaa1 = a * apa;
@@ -404,8 +426,8 @@ mod tests {
             0x48, 0x0c, 0x76, 0xf2, 0x8d, 0x9e, 0x46, 0x31,
             0x6d, 0x16, 0x07, 0x02];
 
-        let nn: B416 = Bytes::from_bytes(n).unwrap();
-        let rr: B416 = Bytes::from_bytes(r).unwrap();
+        let nn: B416<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
+        let rr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
 
         let a = ScalarElem::unpack(&nn).unwrap();
 
@@ -436,8 +458,8 @@ mod tests {
             0x9e, 0x28, 0x2f, 0xce, 0x0e, 0x34, 0xf9, 0xb2,
             0x91, 0xb3, 0x31, 0x06];
 
-        let nn: B512 = Bytes::from_bytes(n).unwrap();
-        let rr: B416 = Bytes::from_bytes(r).unwrap();
+        let nn: B512<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
+        let rr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
 
         let a = ScalarElem::unpack(&nn).unwrap();
 
@@ -473,8 +495,8 @@ mod tests {
             0xf5, 0x8e, 0xd8, 0xc7, 0x66, 0xcc, 0x3c, 0x23,
             0xde, 0x63, 0x9d, 0x01];
 
-        let nn: B832 = Bytes::from_bytes(n).unwrap();
-        let rr: B416 = Bytes::from_bytes(r).unwrap();
+        let nn: B832<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
+        let rr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
 
         let a = ScalarElem::unpack(&nn).unwrap();
 
@@ -504,8 +526,8 @@ mod tests {
             0x19, 0xa6, 0xce, 0xc6, 0xf0, 0x49, 0xa8, 0x00,
             0xde, 0x7d, 0x31, 0x03];
 
-        let nn: B416 = Bytes::from_bytes(n).unwrap();
-        let rr: B416 = Bytes::from_bytes(r).unwrap();
+        let nn: B416<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
+        let rr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
 
         let s = ScalarElem::unpack(&nn).unwrap();
         assert!(s.pack().unwrap() == rr);
@@ -531,8 +553,8 @@ mod tests {
             0x8d, 0x51, 0xcc, 0xef, 0x87, 0xa4, 0x0d, 0x2c,
             0x87, 0xb0, 0xdd, 0x07];
 
-        let nn: B512 = Bytes::from_bytes(n).unwrap();
-        let rr: B416 = Bytes::from_bytes(r).unwrap();
+        let nn: B512<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
+        let rr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
 
         let s = ScalarElem::unpack(&nn).unwrap();
         assert!(s.pack().unwrap() == rr);
@@ -563,8 +585,8 @@ mod tests {
             0xd4, 0x42, 0x49, 0xcf, 0x33, 0x49, 0x07, 0xdf,
             0xb1, 0x3a, 0xee, 0x00];
 
-        let nn: B832 = Bytes::from_bytes(n).unwrap();
-        let rr: B416 = Bytes::from_bytes(r).unwrap();
+        let nn: B832<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
+        let rr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
 
         let s = ScalarElem::unpack(&nn).unwrap();
         assert!(s.pack().unwrap() == rr);
@@ -582,10 +604,10 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0];
 
-        let bb: B416 = Bytes::from_bytes(b).unwrap();
+        let bb: B416<DefaultAllocator> = Bytes::from_bytes(b).unwrap();
 
         let s1 = ScalarElem::unpack(&bb).unwrap();
-        let s2: ScalarElem = FromPrimitive::from_u64(n).unwrap();
+        let s2: ScalarElem<DefaultAllocator> = FromPrimitive::from_u64(n).unwrap();
 
         assert!(s1 == s2);
     }

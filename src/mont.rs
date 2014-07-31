@@ -4,6 +4,7 @@
 //! and handle scalar multiplications.
 use bytes::{B416, Bytes, MontPoint, Scalar};
 use fe::FieldElem;
+use sbuf::{Allocator, DefaultAllocator};
 
 
 static BASEX: [u8, ..52] = [
@@ -13,7 +14,8 @@ static BASEX: [u8, ..52] = [
     0x07, 0x1f, 0x7c, 0xf0, 0xc1, 0x07, 0x1f, 0x7c,
     0xf0, 0xc1, 0x07, 0x1f, 0x7c, 0xf0, 0xc1, 0x07,
     0x1f, 0x7c, 0xf0, 0xc1, 0x07, 0x1f, 0x7c, 0xf0,
-    0xc1, 0x07, 0x1f, 0x3c];
+    0xc1, 0x07, 0x1f, 0x3c
+];
 
 static A24: [u8, ..52] = [
     0x54, 0x36, 0x68, 0xf2, 0x65, 0x83, 0x26, 0x5f,
@@ -22,14 +24,15 @@ static A24: [u8, ..52] = [
     0xf2, 0x65, 0x83, 0x26, 0x5f, 0x36, 0x68, 0xf2,
     0x65, 0x83, 0x26, 0x5f, 0x36, 0x68, 0xf2, 0x65,
     0x83, 0x26, 0x5f, 0x36, 0x68, 0xf2, 0x65, 0x83,
-    0x26, 0x5f, 0x36, 0x26];
+    0x26, 0x5f, 0x36, 0x26
+];
 
-fn basex() -> MontPoint {
+fn basex<A: Allocator>() -> MontPoint<A> {
     MontPoint(Bytes::from_bytes(BASEX).unwrap())
 }
 
-fn a24() -> FieldElem {
-    let b: B416 = Bytes::from_bytes(A24).unwrap();
+fn a24<A: Allocator>() -> FieldElem<A> {
+    let b: B416<A> = Bytes::from_bytes(A24).unwrap();
     FieldElem::unpack(&b)
 }
 
@@ -39,15 +42,17 @@ fn a24() -> FieldElem {
 /// Return a packed point `q` such that `q=n.p`, `n` is a scalar and `p` is
 /// a point. On input, `n` is clamped by this function before performing
 /// its scalar multiplication.
-pub fn scalar_mult(n: &Scalar, p: &MontPoint) -> MontPoint {
-    let mut z: B416;
-    let mut a: FieldElem;
-    let mut b: FieldElem;
-    let mut c: FieldElem;
-    let mut d: FieldElem;
-    let mut e: FieldElem;
-    let mut f: FieldElem;
-    let mut pe: FieldElem;
+pub fn scalar_mult<A: Allocator = DefaultAllocator>(n: &Scalar<A>,
+                                                    p: &MontPoint<A>)
+                                                    -> MontPoint<A> {
+    let mut z: B416<A>;
+    let mut a: FieldElem<A>;
+    let mut b: FieldElem<A>;
+    let mut c: FieldElem<A>;
+    let mut d: FieldElem<A>;
+    let mut e: FieldElem<A>;
+    let mut f: FieldElem<A>;
+    let mut pe: FieldElem<A>;
     let mut r: u8;
 
     // Unpack p, top 2 bits are discarded in FieldElem::unpack().
@@ -60,11 +65,11 @@ pub fn scalar_mult(n: &Scalar, p: &MontPoint) -> MontPoint {
     z = n.get_ref().clone();
     z.clamp_41417();
 
-    *a.get_mut(0) = 1;
-    *d.get_mut(0) = 1;
+    a[0] = 1;
+    d[0] = 1;
 
     for i in range(0u, 414).rev() {
-        r = (*z.get(i >> 3) >> (i & 7)) & 1;
+        r = (z[i >> 3] >> (i & 7)) & 1;
         a.cswap(r as i64, &mut b);
         c.cswap(r as i64, &mut d);
         e = a + c;
@@ -98,7 +103,8 @@ pub fn scalar_mult(n: &Scalar, p: &MontPoint) -> MontPoint {
 ///
 /// Return a packed point `q` such that `q=n.BP`. Where `BP` is the base
 /// point and `n` a scalar value.
-pub fn scalar_mult_base(n: &Scalar) -> MontPoint {
+pub fn scalar_mult_base<A: Allocator = DefaultAllocator>(n: &Scalar<A>)
+                                                         -> MontPoint<A> {
     scalar_mult(n, &basex())
 }
 
@@ -109,28 +115,28 @@ pub fn scalar_mult_base(n: &Scalar) -> MontPoint {
 /// where `pk=sk.BP` with `BP` as base point. `sk` is clamped (see
 /// `B414::clamp_41417()`). The scalar value is returned wrapped in
 /// `Scalar` and the public key is wrapped in `MontPoint`.
-pub fn keypair() -> (MontPoint, Scalar) {
-    let mut sk: B416 = Bytes::new_rand();
+pub fn keypair<A: Allocator = DefaultAllocator>() -> (MontPoint<A>, Scalar<A>) {
+    let mut sk: B416<A> = Bytes::new_rand();
     sk.clamp_41417();
-    let sk_val = Scalar(sk);
-    let pk_val = scalar_mult_base(&sk_val);
+    let sk_val: Scalar<A> = Scalar(sk);
+    let pk_val: MontPoint<A> = scalar_mult_base(&sk_val);
     (pk_val, sk_val)
 }
 
 
 #[cfg(test)]
 mod tests {
-    extern crate test;
-    use self::test::Bencher;
+    use test::Bencher;
 
     use bytes::{B416, Bytes, Scalar};
     use mont;
+    use sbuf::DefaultAllocator;
 
 
     #[test]
     fn test_dh_rand() {
-        let (pk1, sk1) = mont::keypair();
-        let (pk2, sk2) = mont::keypair();
+        let (pk1, sk1) = mont::keypair::<DefaultAllocator>();
+        let (pk2, sk2) = mont::keypair::<DefaultAllocator>();
 
         let ssk1w = mont::scalar_mult(&sk1, &pk2);
         let ssk2w = mont::scalar_mult(&sk2, &pk1);
@@ -158,8 +164,8 @@ mod tests {
             0x79, 0x26, 0x67, 0x18, 0xa9, 0x07, 0x11, 0x21,
             0x84, 0xb8, 0xd7, 0x1c];
 
-        let scn: B416 = Bytes::from_bytes(n).unwrap();
-        let scr: B416 = Bytes::from_bytes(r).unwrap();
+        let scn: B416<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
+        let scr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
 
         let scrr = mont::scalar_mult_base(&Scalar(scn)).unwrap();
         assert!(scr == scrr);
@@ -167,7 +173,7 @@ mod tests {
 
     #[bench]
     fn bench_scalar_mult_base(b: &mut Bencher) {
-        let n = Scalar(Bytes::new_rand());
+        let n: Scalar<DefaultAllocator> = Scalar(Bytes::new_rand());
         b.iter(|| {
             mont::scalar_mult_base(&n);
         })
@@ -175,8 +181,8 @@ mod tests {
 
     #[bench]
     fn bench_scalar_mult(b: &mut Bencher) {
-        let (pk, _) = mont::keypair();
-        let n = Scalar(Bytes::new_rand());
+        let (pk, _) = mont::keypair::<DefaultAllocator>();
+        let n: Scalar<DefaultAllocator> = Scalar(Bytes::new_rand());
         b.iter(|| {
             mont::scalar_mult(&n, &pk);
         })

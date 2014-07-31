@@ -9,6 +9,7 @@ use serialize::{Encodable, Encoder, Decodable, Decoder};
 use serialize::hex::ToHex;
 use std::fmt;
 use std::intrinsics;
+use std::iter::AdditiveIterator;
 use std::mem;
 use std::os;
 use std::ptr;
@@ -19,6 +20,7 @@ use std::slice::{Items, MutItems};
 use utils;
 
 
+/// Trait for allocators.
 pub trait Allocator {
     fn new() -> Self;
 
@@ -154,6 +156,7 @@ impl Allocator for GuardedHeapAllocator {
 #[cfg(target_os = "linux")]
 #[cfg(target_os = "android")]
 mod impadv {
+    use libc::consts::os::bsd44::MADV_DONTFORK;
     use libc::EINVAL;
     use libc::funcs::bsd44;
     use libc::types::common::c95::c_void;
@@ -164,13 +167,14 @@ mod impadv {
     pub unsafe fn madvise(ptr: *mut u8, size: uint) {
         let dont_dump: c_int = 16;
         let ret = bsd44::madvise(ptr as *mut c_void, size as size_t,
-                                 dont_dump);
+                                 dont_dump | MADV_DONTFORK);
         if ret != 0 {
             let errno = os::errno();
-            // FIXME: EINVAL errors are currently ignored because on
-            // Linux < 3.4 MADV_DONTDUMP is not a valid advice. There
-            // should be a better way to check for the availability of
-            // this flag in the kernel and in the libc.
+            // FIXME: EINVAL errors are currently ignored because
+            // MADV_DONTDUMP and MADV_DONTFORK are not valid advices on
+            // old kernels respectively Linux < 3.4 and Linux < 2.6.16.
+            // There should be a better way to check for the availability
+            // of this flag in the kernel and in the libc.
             if errno != EINVAL as int {
                 fail!("madvise failed: {} ({})",
                       os::error_string(errno as uint), errno);
@@ -208,6 +212,44 @@ mod impadv {
 }
 
 
+#[cfg(target_os = "macos")]
+#[cfg(target_os = "ios")]
+#[cfg(target_os = "freebsd")]
+mod impinh {
+    pub use libc::types::common::c95::c_void;
+    pub use libc::types::os::arch::c95::{c_int, size_t};
+    use std::os;
+
+
+    mod bsdext {
+        extern {
+            pub fn minherit(addr: *mut super::c_void, len: super::size_t,
+                            inherit: super::c_int) -> super::c_int;
+        }
+    }
+
+    pub unsafe fn minherit(ptr: *mut u8, size: uint) {
+        // Value named INHERIT_NONE on freebsd and VM_INHERIT_NONE on
+        // macos/ios.
+        let inherit_none: c_int = 2;
+        let ret = bsdext::minherit(ptr as *mut c_void, size as size_t,
+                                   inherit_none);
+        if ret != 0 {
+            let errno = os::errno();
+            fail!("minherit failed: {} ({})",
+                  os::error_string(errno as uint), errno);
+        }
+    }
+}
+
+#[cfg(not(target_os = "macos"), not(target_os = "ios"),
+      not(target_os = "freebsd"))]
+mod impinh {
+    pub unsafe fn minherit(_: *mut u8, _: uint) {
+    }
+}
+
+
 unsafe fn alloc<A: Allocator, T>(count: uint) -> *mut T {
     let size_of_t = mem::size_of::<T>();
 
@@ -228,8 +270,9 @@ unsafe fn alloc<A: Allocator, T>(count: uint) -> *mut T {
               os::error_string(errno as uint), errno);
     }
 
-    // madvise
+    // madvise and minherit
     self::impadv::madvise(ptr as *mut u8, size);
+    self::impinh::minherit(ptr as *mut u8, size);
 
     ptr
 }
@@ -263,8 +306,7 @@ unsafe fn dealloc<A: Allocator, T>(ptr: *mut T, count: uint) {
 }
 
 
-// FIXME: we could specify a default allocator here:
-//        pub struct SBuf<T, A = StdHeapAllocator> {
+/// Secure Buffer.
 pub struct SBuf<A, T> {
     len: uint,
     ptr: *mut T
@@ -316,6 +358,16 @@ impl<A: Allocator, T> SBuf<A, T> {
         n
     }
 
+    /// New allocated buffer with its `length` elements initilized from
+    /// provided closure `op`.
+    pub fn from_fn(length: uint, op: |uint| -> T) -> SBuf<A, T> {
+        let mut n = SBuf::with_length(length);
+        for i in range(0u, length) {
+            n[i] = op(i);
+        }
+        n
+    }
+
     /// New buffer from slice.
     pub fn from_slice(values: &[T]) -> SBuf<A, T> {
         unsafe {
@@ -328,6 +380,21 @@ impl<A: Allocator, T> SBuf<A, T> {
         assert!(!buf.is_null());
         let n = SBuf::with_length(length);
         ptr::copy_nonoverlapping_memory(n.ptr, buf, n.len);
+        n
+    }
+
+    pub fn from_slices(items: &[&[T]]) -> SBuf<A, T> {
+        let length = items.iter().map(|x| x.len()).sum();
+        let n = SBuf::with_length(length);
+        let mut idx: int = 0;
+
+        unsafe {
+            for it in items.iter() {
+                ptr::copy_nonoverlapping_memory(n.ptr.offset(idx),
+                                                it.as_ptr(), it.len());
+                idx += it.len() as int;
+            }
+        }
         n
     }
 
@@ -356,7 +423,7 @@ impl<A: Allocator, T> SBuf<A, T> {
     }
 
     /// Work with `self` as a slice.
-    pub fn as_slice<'a>(&'a self) -> &'a [T] {
+    pub fn as_slice(&self) -> &[T] {
         unsafe {
             mem::transmute(Slice {
                 data: self.as_ptr(),
@@ -366,7 +433,7 @@ impl<A: Allocator, T> SBuf<A, T> {
     }
 
     /// Work with `self` as a mutable slice.
-    pub fn as_mut_slice<'a>(&'a mut self) -> &'a mut [T] {
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
         unsafe {
             mem::transmute(Slice {
                 data: self.as_mut_ptr() as *const T,
@@ -375,65 +442,91 @@ impl<A: Allocator, T> SBuf<A, T> {
         }
     }
 
+    /// Cast `self` with another type and return a slice on it.
+    pub fn as_cast<U>(&self) -> &[U] {
+        let bytes_size = self.size();
+        let dst_type_size = mem::size_of::<U>();
+        assert!(bytes_size > 0 && bytes_size % dst_type_size == 0);
+        unsafe {
+            mem::transmute(Slice {
+                data: self.ptr as *const U,
+                len: bytes_size / dst_type_size
+            })
+        }
+    }
+
+    /// Cast `self` with another type and return a mut slice on it.
+    pub fn as_mut_cast<U>(&mut self) -> &mut [U] {
+        let bytes_size = self.size();
+        let dst_type_size = mem::size_of::<U>();
+        assert!(bytes_size > 0 && bytes_size % dst_type_size == 0);
+        unsafe {
+            mem::transmute(Slice {
+                data: self.ptr as *const U,
+                len: bytes_size / dst_type_size
+            })
+        }
+    }
+
     /// Return a reference to the value at index `index`. Fails if
     /// `index` is out of bounds.
-    pub fn get<'a>(&'a self, index: uint) -> &'a T {
+    pub fn get(&self, index: uint) -> &T {
         &self.as_slice()[index]
     }
 
     /// Return a mutable reference to the value at index `index`. Fails
     /// if `index` is out of bounds.
-    pub fn get_mut<'a>(&'a mut self, index: uint) -> &'a mut T {
+    pub fn get_mut(&mut self, index: uint) -> &mut T {
         &mut self.as_mut_slice()[index]
     }
 
     /// Return an iterator over references to the elements of the buffer
     /// in order.
-    pub fn iter<'a>(&'a self) -> Items<'a, T> {
+    pub fn iter(&self) -> Items<T> {
         self.as_slice().iter()
     }
 
     /// Return an iterator over mutable references to the elements of the
     /// buffer in order.
-    pub fn mut_iter<'a>(&'a mut self) -> MutItems<'a, T> {
+    pub fn mut_iter(&mut self) -> MutItems<T> {
         self.as_mut_slice().mut_iter()
     }
 
     /// Return a slice of self spanning the interval [`start`, `end`).
     /// Fails when the slice (or part of it) is outside the bounds of self,
     /// or when `start` > `end`.
-    pub fn slice<'a>(&'a self, start: uint, end: uint) -> &'a [T] {
+    pub fn slice(&self, start: uint, end: uint) -> &[T] {
         self.as_slice().slice(start, end)
     }
 
     /// Return a mutable slice of `self` between `start` and `end`.
     /// Fails when `start` or `end` point outside the bounds of `self`, or when
     /// `start` > `end`.
-    pub fn mut_slice<'a>(&'a mut self, start: uint, end: uint) -> &'a mut [T] {
+    pub fn mut_slice(&mut self, start: uint, end: uint) -> &mut [T] {
         self.as_mut_slice().mut_slice(start, end)
     }
 
     /// Return a slice of `self` from `start` to the end of the buffer.
     /// Fails when `start` points outside the bounds of self.
-    pub fn slice_from<'a>(&'a self, start: uint) -> &'a [T] {
+    pub fn slice_from(&self, start: uint) -> &[T] {
         self.as_slice().slice_from(start)
     }
 
     /// Return a mutable slice of self from `start` to the end of the buffer.
     /// Fails when `start` points outside the bounds of self.
-    pub fn mut_slice_from<'a>(&'a mut self, start: uint) -> &'a mut [T] {
+    pub fn mut_slice_from(&mut self, start: uint) -> &mut [T] {
         self.as_mut_slice().mut_slice_from(start)
     }
 
     /// Return a slice of self from the start of the buffer to `end`.
     /// Fails when `end` points outside the bounds of self.
-    pub fn slice_to<'a>(&'a self, end: uint) -> &'a [T] {
+    pub fn slice_to(&self, end: uint) -> &[T] {
         self.as_slice().slice_to(end)
     }
 
     /// Return a mutable slice of self from the start of the buffer to `end`.
     /// Fails when `end` points outside the bounds of self.
-    pub fn mut_slice_to<'a>(&'a mut self, end: uint) -> &'a mut [T] {
+    pub fn mut_slice_to(&mut self, end: uint) -> &mut [T] {
         self.as_mut_slice().mut_slice_to(end)
     }
 
@@ -443,8 +536,7 @@ impl<A: Allocator, T> SBuf<A, T> {
     /// index `mid` itself) and the second will contain all indices from
     /// `[mid, len)` (excluding the index `len` itself). Fails if
     /// `mid > len`.
-    pub fn mut_split_at<'a>(&'a mut self, mid: uint) -> (&'a mut [T],
-                                                         &'a mut [T]) {
+    pub fn mut_split_at(&mut self, mid: uint) -> (&mut [T], &mut [T]) {
         self.as_mut_slice().mut_split_at(mid)
     }
 
@@ -456,12 +548,12 @@ impl<A: Allocator, T> SBuf<A, T> {
 
 impl<A: Allocator, T: FromPrimitive> SBuf<A, T> {
     /// New buffer from bytes.
-    fn from_bytes(bytes: &[u8]) -> SBuf<A, T> {
+    pub fn from_bytes(bytes: &[u8]) -> SBuf<A, T> {
         let len = bytes.len();
         let mut n: SBuf<A, T> = SBuf::with_length(len);
 
         for i in range(0u, len) {
-            *n.get_mut(i) = FromPrimitive::from_u8(bytes[i]).unwrap();
+            n[i] = FromPrimitive::from_u8(bytes[i]).unwrap();
         }
         n
     }
@@ -481,6 +573,18 @@ impl<A: Allocator, T> Drop for SBuf<A, T> {
 impl<A: Allocator, T> Clone for SBuf<A, T> {
     fn clone(&self) -> SBuf<A, T> {
         SBuf::from_slice(self.as_slice())
+    }
+}
+
+impl<A: Allocator, T> Index<uint, T> for SBuf<A, T> {
+    fn index(&self, index: &uint) -> &T {
+        self.get(*index)
+    }
+}
+
+impl<A: Allocator, T> IndexMut<uint, T> for SBuf<A, T> {
+    fn index_mut(&mut self, index: &uint) -> &mut T {
+        self.get_mut(*index)
     }
 }
 
@@ -522,7 +626,7 @@ impl<A: Allocator,
         d.read_seq(|d, len| {
             let mut n = SBuf::with_length(len);
             for i in range(0u, len) {
-                *n.get_mut(i) = try!(d.read_seq_elt(i, |d| Decodable::decode(d)));
+                n[i] = try!(d.read_seq_elt(i, |d| Decodable::decode(d)));
             }
             Ok(n)
         })
@@ -535,31 +639,6 @@ impl<A: Allocator> ToHex for SBuf<A, u8> {
         s.to_hex()
     }
 }
-
-// FIXME: clean-up.
-/*
-impl<A: Allocator, T: ToHex> ToHex for SBuf<A, T> {
-    fn to_hex(&self) -> String {
-        let s = self.as_slice();
-        s.to_hex()
-       // let v: Vec<String> = self.iter().map(|e| e.to_hex()).collect();
-       // v.concat()
-    }
-}
-
-impl<A: Allocator, T: ToHex> ToHex for SBuf<A, T> {
-    fn to_hex(&self) -> String {
-        let v: Vec<String> = self.iter().map(|e| e.to_hex()).collect();
-        v.concat()
-    }
-}
-
-impl ToHex for u8 {
-    fn to_hex(&self) -> String {
-        self.to_str_radix(16)
-    }
-}
-*/
 
 
 #[cfg(test)]

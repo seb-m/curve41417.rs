@@ -1,4 +1,6 @@
 // Crypto utils.
+#![macro_escape]
+
 use std::intrinsics;
 use std::mem;
 use std::num;
@@ -8,6 +10,7 @@ use std::slice::MutableVector;
 
 
 // Zero-out memory buffer.
+#[allow(dead_code)]
 fn zero_memory<T>(b: &mut [T]) {
     unsafe {
         // FIXME: not sure how much this llvm intrinsics could not be
@@ -18,6 +21,7 @@ fn zero_memory<T>(b: &mut [T]) {
 
 // Copy count elements from slice src to mutable slice dst.
 // Requirement: count >= min(srclen, dstlen)
+#[allow(dead_code)]
 pub fn copy_slice_memory<T>(dst: &mut[T], src: &[T], count: uint) {
     assert!(dst.len() >= count && src.len() >= count);
     unsafe {
@@ -26,6 +30,7 @@ pub fn copy_slice_memory<T>(dst: &mut[T], src: &[T], count: uint) {
                                         count);
     }
 }
+
 
 // Return 1 iff x == y; 0 otherwise.
 fn byte_eq(x: u8, y: u8) -> u8 {
@@ -76,10 +81,25 @@ pub fn bytes_cswap<T: Signed + Primitive + Int>(cond: T,
     }
 }
 
+
 // Instanciate a secure RNG (based on urandom).
 pub fn urandom_rng() -> OsRng {
     OsRng::new().unwrap()
 }
+
+
+// Helpers
+#[doc(hidden)]
+#[macro_export]
+macro_rules! try_none(
+    ($e:expr) => (match $e { Ok(e) => e, Err(_) => return None })
+)
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! try_option(
+    ($e:expr) => (match $e { Some(e) => e, None => return None })
+)
 
 
 #[cfg(test)]

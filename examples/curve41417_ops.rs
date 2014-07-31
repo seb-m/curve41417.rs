@@ -1,9 +1,12 @@
+#![feature(default_type_params)]
+
 extern crate curve41417;
 
 use curve41417::bytes::{B416, Bytes, Scalar};
 use curve41417::ed::GroupElem;
 use curve41417::mont;
 use curve41417::sc::ScalarElem;
+use curve41417::sbuf::DefaultAllocator;
 
 
 fn main () {
@@ -13,11 +16,15 @@ fn main () {
     // library.
 
     // Let's instanciate a new key pair in Montgomery's representation.
-    let (pkm, sk) = mont::keypair();
+    // `DefaultAllocator` represents a memory allocator used to allocate
+    // memory buffers for this variable and for internal temporary buffers
+    // used in crypto operations. This type parameter is optional and
+    // defaults to `DefaultAllocator` when not provided.
+    let (pkm, sk) = mont::keypair::<DefaultAllocator>();
 
     // `sk` is a generic scalar and is clamped so we can use it as is to
     // compute the corresponding public key in Edwards representation.
-    let pke: GroupElem = GroupElem::base().scalar_mult(&sk);
+    let pke: GroupElem<DefaultAllocator> = GroupElem::base().scalar_mult(&sk);
 
     // In this case `pke` is not a packed value but still a group element
     // this is because we might want to apply others operations without
@@ -36,7 +43,7 @@ fn main () {
     // Likewise results are often wrapped in these structs when needed.
 
     // Let's illustrate it by instanciating a new scalar.
-    let mut b2: B416 = Bytes::new_rand();
+    let mut b2: B416<DefaultAllocator> = Bytes::new_rand();
     b2.clamp_41417();
 
     // Transform `b2` to an explicit scalar value and multiply DH-style to
@@ -48,9 +55,11 @@ fn main () {
     // To conclude, some protocols need to perform basic operations directly
     // on scalar vakues modulo the base point's order. The `sc` module
     // provides just that. Let's multiply `42` by `sk`.
-    let sc_sk: ScalarElem = ScalarElem::unpack(sk.get_ref()).unwrap();
-    let sc_42: ScalarElem = FromPrimitive::from_u64(42).unwrap();
-    let sc_sk42: ScalarElem = sc_sk * sc_42;
+    let sc_sk: ScalarElem<DefaultAllocator> =
+        ScalarElem::unpack(sk.get_ref()).unwrap();
+    let sc_42: ScalarElem<DefaultAllocator> =
+        FromPrimitive::from_u64(42).unwrap();
+    let sc_sk42: ScalarElem<DefaultAllocator> = sc_sk * sc_42;
 
     // We can also pack the result and multiply it to its base point to see if
     // it matches `42 * pke`, it should. In this case the `GroupElem` is used

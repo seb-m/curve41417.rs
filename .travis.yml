@@ -3,15 +3,16 @@ env:
     - secure: uCkgC1zrZK7dYJAFIt7PMdM02E9kuD/oyJ0XyZQr5B3/0onMdu357kYCvRwjHx6OS866xDHiwO+NIIpJQvoItecP/Fa+Tq85dmoEmQW2JTmNYEei8g+XV7XuIZ/kU7IElIeN4XfEw1y3Dmno2Sdy+a/lbCDRwUe3hsjPzW6LZTE=
     - LD_LIBRARY_PATH: /usr/local/lib
 before_install:
-  - yes | sudo add-apt-repository ppa:hansjorg/rust
-  - sudo apt-get update
+  - sudo add-apt-repository --yes ppa:hansjorg/rust
+  - sudo add-apt-repository --yes ppa:cmrx64/cargo
+  - sudo apt-get update -qq
 install:
-  - sudo apt-get install rust-nightly
+  - sudo apt-get install -qq rust-nightly cargo
 script:
-  - make clean
-  - make lib
+  - cargo clean
+  - cargo build
 #  - make mlock
-#  - make test
+#  - cargo test
   - make doc
 after_script:
   - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh

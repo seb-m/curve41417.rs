@@ -1,6 +1,6 @@
 env:
   global:
-    - secure: uCkgC1zrZK7dYJAFIt7PMdM02E9kuD/oyJ0XyZQr5B3/0onMdu357kYCvRwjHx6OS866xDHiwO+NIIpJQvoItecP/Fa+Tq85dmoEmQW2JTmNYEei8g+XV7XuIZ/kU7IElIeN4XfEw1y3Dmno2Sdy+a/lbCDRwUe3hsjPzW6LZTE=
+    - secure: wXF4dA/vp6THwiTlwSgdVadfUJRCQ9+oMzxh/C/RJbhkIv/5/CbkIbG+liVz8Oz0DFx6p8Mdp/jhSXfUwO36ijp4+keyTWzGfF9eP09/KynbXmOl8ssW45cwTrOtPxoYWOlbjpg8WdFHdnZxYeYZxio3FUVwvdOhMSexanOIExM=
     - LD_LIBRARY_PATH: /usr/local/lib
 before_install:
   - sudo add-apt-repository --yes ppa:hansjorg/rust

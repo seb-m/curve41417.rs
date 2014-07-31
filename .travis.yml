@@ -13,6 +13,7 @@ script:
   - cargo build
 #  - make mlock
 #  - cargo test
+# temp
 #  - cargo doc
    - make doc
 after_script:

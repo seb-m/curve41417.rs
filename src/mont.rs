@@ -113,7 +113,7 @@ pub fn scalar_mult_base<A: Allocator = DefaultAllocator>(n: &Scalar<A>)
 /// A new key pair `(pk, sk)` is generated. `sk` is a secret key randomly
 /// generated and used as scalar value to compute the public key `pk`
 /// where `pk=sk.BP` with `BP` as base point. `sk` is clamped (see
-/// `B414::clamp_41417()`). The scalar value is returned wrapped in
+/// `B416::clamp_41417()`). The scalar value is returned wrapped in
 /// `Scalar` and the public key is wrapped in `MontPoint`.
 pub fn keypair<A: Allocator = DefaultAllocator>() -> (MontPoint<A>, Scalar<A>) {
     let mut sk: B416<A> = Bytes::new_rand();

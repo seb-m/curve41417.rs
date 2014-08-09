@@ -137,6 +137,7 @@ impl<A: Allocator> FieldElem<A> {
         t[0] & 1
     }
 
+    #[allow(dead_code)]
     pub fn muli(&self, other: i16) -> FieldElem<A> {
         let mut r = self.clone();
 
@@ -163,6 +164,7 @@ impl<A: Allocator> FieldElem<A> {
         r
     }
 
+    // Legendre symbol.
     // i ** ((P - 1) / 2) = i ** (2 ** 413 - 9)
     pub fn pow4139(&self) -> FieldElem<A> {
         let mut r = self.clone();
@@ -189,6 +191,7 @@ impl<A: Allocator> FieldElem<A> {
         r
     }
 
+    // Principal square root for p = 3 mod 4.
     // i ** ((P + 1) / 4) = i ** (2 ** 412 - 4)
     pub fn pow4124(&self) -> FieldElem<A> {
         let mut r = self.clone();

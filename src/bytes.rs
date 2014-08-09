@@ -402,6 +402,7 @@ impl<A: Allocator> ToHex for $name<A> {
 wrapper_impl!(Scalar)
 wrapper_impl!(MontPoint)
 wrapper_impl!(EdPoint)
+wrapper_impl!(Elligator)
 
 
 #[doc(hidden)]

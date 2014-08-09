@@ -3,7 +3,7 @@ use serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 
-use bytes::{B416, Bytes, EdPoint, MontPoint, Scalar, Uniformity};
+use bytes::{B416, Bytes, Uniformity, EdPoint, Elligator, MontPoint, Scalar};
 use fe::FieldElem;
 use sbuf::{Allocator, DefaultAllocator};
 
@@ -78,18 +78,8 @@ static EDD: [u8, ..52] = [
     0, 0, 0, 0
 ];
 
-static ELLIGATORA: [u8, ..52] = [
-    0xcd, 0xf1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0x3f
-];
-
-static ELLIGATORB: [u8, ..52] = [
-    0x21, 0x0e, 0, 0, 0, 0, 0, 0,
+static MONTA: [u8, ..52] = [
+    0x11, 0x07, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -98,14 +88,24 @@ static ELLIGATORB: [u8, ..52] = [
     0, 0, 0, 0
 ];
 
-static ELLIGATORAD: [u8, ..52] = [
-    0xcf, 0xf1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0x3f
+static MONTB: [u8, ..52] = [
+    0x40, 0x78, 0x0c, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0
+];
+
+static MONTB1: [u8, ..52] = [
+    0x76, 0xd9, 0xa0, 0xc9, 0x97, 0x0d, 0x9a, 0x7c,
+    0xd9, 0xa0, 0xc9, 0x97, 0x0d, 0x9a, 0x7c, 0xd9,
+    0xa0, 0xc9, 0x97, 0x0d, 0x9a, 0x7c, 0xd9, 0xa0,
+    0xc9, 0x97, 0x0d, 0x9a, 0x7c, 0xd9, 0xa0, 0xc9,
+    0x97, 0x0d, 0x9a, 0x7c, 0xd9, 0xa0, 0xc9, 0x97,
+    0x0d, 0x9a, 0x7c, 0xd9, 0xa0, 0xc9, 0x97, 0x0d,
+    0x9a, 0x7c, 0xd9, 0x18
 ];
 
 
@@ -175,19 +175,19 @@ impl<A: Allocator> GroupElem<A> {
         FieldElem::unpack(&bedd)
     }
 
-    fn elligatora() -> FieldElem<A> {
-        let bea: B416<A> = Bytes::from_bytes(ELLIGATORA).unwrap();
-        FieldElem::unpack(&bea)
+    fn monta() -> FieldElem<A> {
+        let a: B416<A> = Bytes::from_bytes(MONTA).unwrap();
+        FieldElem::unpack(&a)
     }
 
-    fn elligatorb() -> FieldElem<A> {
-        let beb: B416<A> = Bytes::from_bytes(ELLIGATORB).unwrap();
-        FieldElem::unpack(&beb)
+    fn montb() -> FieldElem<A> {
+        let b: B416<A> = Bytes::from_bytes(MONTB).unwrap();
+        FieldElem::unpack(&b)
     }
 
-    fn elligatorad() -> FieldElem<A> {
-        let bead: B416<A> = Bytes::from_bytes(ELLIGATORAD).unwrap();
-        FieldElem::unpack(&bead)
+    fn montb1() -> FieldElem<A> {
+        let b1: B416<A> = Bytes::from_bytes(MONTB1).unwrap();
+        FieldElem::unpack(&b1)
     }
 
     // Propagate changes made in x and y to z and t.
@@ -325,7 +325,7 @@ impl<A: Allocator> GroupElem<A> {
     }
 
     /// Convert this point's coordinates to Montgomery's x-coordinate.
-    /// This result may be used as input point in`mont`
+    /// This result may be used as input point in `curve41417::mont`
     /// scalar multiplications.
     pub fn to_mont(&self) -> MontPoint<A> {
         let zi = self.z.inv();
@@ -339,33 +339,107 @@ impl<A: Allocator> GroupElem<A> {
         MontPoint(num.pack())
     }
 
-    // FIXME: would there be a risk of lack of uniformity of the distribution
-    // mod L if the input string r was a 52 bytes random string? At least as
-    // specified in ed25519-20110926.pdf a 64 bytes input should provide
-    // enough uniformity.
-    fn elligator_map(n: &FieldElem<A>) -> Option<GroupElem<A>> {
-        let mut p: GroupElem<A> = GroupElem::new();
+    /// Use Elligator to encode a curve point to a byte-string representation.
+    pub fn elligator_to_representation(&self) -> Option<Elligator<A>> {
+        // Use the following isomorphism:
+        //  Eed: x^2 + y^2 = 1 + 3617 x^2 * y^2
+        //  Ew: v^2 = u^3 + A*u^2 + B*u
+        //
+        // With:
+        //  d=3617
+        //  A1=2*(1+d)/(1-d)
+        //  B1=4/(1-d)
+        //  A=A1/B1
+        //  B=1/B1^2
+        //
+        // Points conversions:
+        //  u=(1+y)/B1*(1-y)
+        //  v=u/x=(1+y)/(B*x*(1-y))
+        //  x=u/v
+        //  y=(B1*u-1)/(B1*u+1)
 
-        // The input n is not defined for {-1, 1}
+        // Convert coordinates.
+        let mut t0 = self.z - self.y;
+        t0 = GroupElem::montb1() * t0;
+        let mut t1 = self.z + self.y;
+
+        let mut u = t0.inv();
+        u = t1 * u;  // u
+
+        t0 = self.x * t0;
+        let mut v = t0.inv();
+        v = t1 * v;
+        v = self.z * v;  // v
+
+        // Few remarks:
+        //
+        // - Use elligator type 2 as recommanded in:
+        //   https://www.mail-archive.com/curves@moderncrypto.org/msg00043.html
+        //
+        // - Employ the same terminology used in elligator-20130828.pdf
+        //   section 5.2 with u=-1.
+        //
+        // - See https://www.imperialviolet.org/2013/12/25/elligator.html
+        //   for more details on c.
+        //
+        //   c=(u(u+A)^3)^((q-3)/4) where c, c^2 and c^3 will be used in the
+        //   following computations.
+        //
+        // - Don't check special cases x!=0 and y=0 => x=0, there are very
+        //   unlikely.
+        let upa = u + GroupElem::monta();
+        let mut c = upa.square();
+        c = c * upa;
+        c = c * u;
+        let mut r2 = c.clone();
+        let mut t = c.clone();
+        c = c.pow4125();  // c
+
+        // Check u(u+A) is a square i.e. (u*(u+A))^((q-1)/2)=u*(u+A)^3*c^2=1
+        //
+        t1 = c.square();
+        t = t1 * t;  // t
+        if t.parity_bit() == 0 {
+            return None;
+        }
+
+        // First square root r1=(u/(u+A))^((q+1)/4)=u*(u+A)*c
+        let mut r1 = upa * u;
+        r1 = r1 * c;  // r1
+
+        // Second square root r2=((u+A)/u)^((q+1)/4)=u*(u+A)^5*c^3
+        t0 = upa.square();
+        r2 = r2 * t0;
+        r2 = r2 * t1;
+        r2 = r2 * c;  // r2
+
+        // Choose between r1 and r2 by testing if v is itself a square.
+        // Note: checking if v < (q+1)/2 would be more efficient than
+        //       taking the Legendre symbol.
+        let rc = v.pow4139();
+        r2.cswap(rc.parity_bit() as i64, &mut r1);
+        Some(Elligator(r2.pack()))
+    }
+
+    fn elligator_from_fe(n: &FieldElem<A>) -> Option<GroupElem<A>> {
+        // Check n not in {-1, 1} (A^2-4B is a non-square in Fq).
         let r = n.pack();
-        let success: bool = (r != GroupElem::b1()) &
-            (r != GroupElem::bminus1());
+        if r == GroupElem::b1() || r == GroupElem::bminus1() {
+            return None;
+        }
 
-        // Use elligator type 2 as recommanded in:
-        // https://www.mail-archive.com/curves@moderncrypto.org/msg00043.html
-        // See elligator-20130828.pdf (section 5.2)
-        let mut t1 = n.clone();
-        t1 = t1.square();
+        // See comments in elligator_to_representation().
+        let mut t1 = n.square();
         let mut v = FieldElem::one() - t1;
         v = v.inv();
-        v = GroupElem::elligatora() * v;
+        v = GroupElem::monta() * v;
         v = -v;  // v
 
         t1 = v.square();
         let mut e = t1 * v;
-        let mut t2 = GroupElem::elligatora() * t1;
+        let mut t2 = GroupElem::monta() * t1;
         e = e + t2;
-        t1 = GroupElem::elligatorb() * v;
+        t1 = GroupElem::montb() * v;
         e = e + t1;
         e = e.pow4139();  // e
 
@@ -374,45 +448,54 @@ impl<A: Allocator> GroupElem<A> {
         t1 = -v;
         x.cswap(is_e_minus_one, &mut t1);
         t1 = FieldElem::zero();
-        t2 = GroupElem::elligatora();
+        t2 = GroupElem::monta();
         t1.cswap(is_e_minus_one, &mut t2);
         x = x - t1;  // x
 
-        let mut y2 = GroupElem::elligatorb() * x;
-        let x2 = x.square();  // x2
-        let mut y = GroupElem::elligatora() * x2;
+        let mut y2 = GroupElem::montb() * x;
+        let x2 = x.square();  // x^2
+        let mut y = GroupElem::monta() * x2;
         y = y + y2;
         y2 = x2 * x;
-        y2 = y + y2;
-        y = y2.pow4124();  // y2
+        y2 = y + y2;  // y^2
+        y = y2.pow4124();
         t1 = -y;
         y.cswap(1 - is_e_minus_one, &mut t1);  // y
 
-        // Convert to Edwards coordinates: see 20080620-rennes.pdf (slide 24)
-        t1 = GroupElem::elligatorb() - x2;
-        t1 = t1.inv();
-        t1 = y * t1;
-        p.x = t1.muli(2);
+        // Convert to Edwards coordinates.
+        let mut p: GroupElem<A> = GroupElem::new();
+        t1 = y.inv();
+        p.x = x * t1;
 
-        t1 = GroupElem::elligatorad() * x2;
-        t2 = y2 + t1;
+        t1 = GroupElem::montb1() * x;
+        t2 = t1 + FieldElem::one();
         t2 = t2.inv();
-        t1 = y2 - t1;
+        t1 = t1 - FieldElem::one();
         p.y = t1 * t2;
 
         p.propagate_from_xy();
-
-        match success {
-            true => Some(p),
-            false => None
-        }
+        Some(p)
     }
 
     /// Map a byte-string to a curve point. Return a valid group element
-    /// if `n` produces to a well-defined point.
-    pub fn elligator_map_from_bytes<T: Bytes + Uniformity>(
-        n: &T) -> Option<GroupElem<A>> {
-        GroupElem::elligator_map(&FieldElem::reduce_weak_from_bytes(n))
+    /// if `s` produces to a well-defined point. The provided input is
+    /// first reduced in `Fq`. For better uniformity of the distribution
+    /// in `Fq` the input must be sufficiently large (see section 2 of
+    /// ed25519-20110926.pdf).
+    pub fn elligator_from_bytes<T: Bytes + Uniformity>(s: &T)
+                                                       -> Option<GroupElem<A>> {
+        GroupElem::elligator_from_fe(&FieldElem::reduce_weak_from_bytes(s))
+    }
+
+    /// Map a byte-string representation to a curve point. Return a valid
+    /// group element if it produces to a well-defined point.
+    ///
+    /// The argument provided to this method is expected to originate from
+    /// the encoded representation returned by
+    /// `elligator_to_representation()`.
+    pub fn elligator_from_representation(r: &Elligator<A>)
+                                         -> Option<GroupElem<A>> {
+        GroupElem::elligator_from_fe(&FieldElem::unpack(r.get_ref()))
     }
 }
 
@@ -516,7 +599,7 @@ impl<A: Allocator> Eq for GroupElem<A> {
 mod tests {
     use test::Bencher;
 
-    use bytes::{B416, B512, B832, Bytes, Scalar};
+    use bytes::{B416, B512, Bytes, Scalar, Elligator};
     use ed;
     use mont;
     use sbuf::DefaultAllocator;
@@ -607,79 +690,72 @@ mod tests {
     }
 
     #[test]
-    fn test_elligator_map_ref() {
-        let n1: [u8, ..64] = [
+    fn test_elligator_ref() {
+        let n: [u8, ..52] = [
             0x40, 0xc9, 0x00, 0x57, 0xf5, 0xe2, 0xa2, 0x93,
             0x7c, 0x7e, 0x49, 0xbc, 0xce, 0xe4, 0xe5, 0x58,
             0x96, 0x6a, 0xf9, 0x77, 0x9f, 0x28, 0x83, 0x55,
             0x8f, 0x86, 0xf0, 0x60, 0x7f, 0x28, 0x50, 0x3c,
             0xe6, 0x2d, 0x6e, 0xdd, 0x60, 0xba, 0xe6, 0xc7,
             0xa8, 0x7c, 0x34, 0xfd, 0x03, 0xb3, 0xb5, 0xb6,
-            0x17, 0x7c, 0x16, 0xdd, 0xaf, 0x34, 0xb3, 0x4a,
-            0xbd, 0xa6, 0xbe, 0xf4, 0xeb, 0xed, 0x2f, 0x39];
-        let x1: [u8, ..52] = [
-            0x3a, 0x5b, 0x29, 0x58, 0xe5, 0x14, 0x00, 0x87,
-            0x47, 0x53, 0x9b, 0x86, 0x03, 0x36, 0x77, 0xa7,
-            0x51, 0xc1, 0x0d, 0x14, 0x0b, 0xe2, 0x03, 0x8e,
-            0xc6, 0x1c, 0x8e, 0x62, 0x12, 0x86, 0xe9, 0xb0,
-            0xfb, 0xd3, 0x97, 0xf8, 0x3f, 0x97, 0x6e, 0x56,
-            0x74, 0x65, 0x5d, 0x3f, 0xe9, 0x0b, 0xe4, 0x1e,
-            0xe1, 0x92, 0x86, 0x04];
-        let y1: [u8, ..52] = [
-            0x58, 0xb6, 0xd9, 0x2b, 0x03, 0x12, 0x5d, 0xea,
-            0xa0, 0x51, 0x86, 0xef, 0x6e, 0xbd, 0x00, 0x26,
-            0x9d, 0x1b, 0x79, 0xb4, 0x36, 0xd1, 0xd5, 0xa3,
-            0xff, 0x9c, 0x02, 0xb3, 0xb2, 0xe2, 0xe0, 0xbe,
-            0xfc, 0x55, 0x3e, 0x36, 0x30, 0xc6, 0xa9, 0x06,
-            0x1a, 0x81, 0xad, 0xbc, 0x26, 0xad, 0x35, 0xeb,
-            0x98, 0xc7, 0x7a, 0x35];
+            0x17, 0x7c, 0x16, 0x15];
 
-        let n2: [u8, ..104] = [
-            0x74, 0x44, 0xd0, 0x4d, 0xba, 0xe0, 0xd1, 0x85,
-            0x4d, 0x45, 0x8b, 0xdd, 0x38, 0x11, 0xa4, 0x03,
-            0xfd, 0xc3, 0x7b, 0x16, 0x5c, 0x8f, 0x41, 0x92,
-            0xc9, 0xc3, 0x12, 0x7d, 0xda, 0xf9, 0xc3, 0x55,
-            0x9a, 0x97, 0x09, 0xb2, 0x64, 0xe8, 0x1d, 0x51,
-            0xb9, 0xa4, 0x80, 0x71, 0x3d, 0x80, 0x09, 0xc0,
-            0xf0, 0x5d, 0x91, 0x96, 0x3d, 0x85, 0x4d, 0x5d,
-            0x42, 0xef, 0xf7, 0xca, 0x9a, 0x95, 0xa0, 0xde,
-            0xd9, 0x65, 0xe2, 0xf1, 0x65, 0x76, 0x80, 0x00,
-            0xd4, 0x1c, 0xf5, 0x23, 0x2e, 0x6b, 0x36, 0xad,
-            0x09, 0xdb, 0xbd, 0xe7, 0x31, 0xec, 0x81, 0xf1,
-            0xd5, 0x06, 0xcf, 0x32, 0x1c, 0x19, 0xe1, 0x88,
-            0x55, 0xc2, 0x5a, 0x83, 0x3e, 0xec, 0xc9, 0xbb];
-        let x2: [u8, ..52] = [
-            0x85, 0x95, 0x7b, 0x90, 0xb9, 0x0c, 0xfc, 0x62,
-            0x3a, 0xaf, 0x8e, 0xb8, 0xa2, 0x45, 0xcd, 0xaa,
-            0x49, 0x4f, 0x48, 0x9f, 0x66, 0xc1, 0x9d, 0xd9,
-            0x13, 0x6e, 0xd6, 0x64, 0x36, 0x6f, 0xc2, 0x2f,
-            0xaf, 0xd3, 0x20, 0x6c, 0xe3, 0x0d, 0x57, 0x8b,
-            0xd1, 0xf6, 0x1f, 0x1a, 0x0c, 0x73, 0x63, 0xfe,
-            0xf6, 0x57, 0x4a, 0x06];
-        let y2: [u8, ..52] = [
-            0x3f, 0x2b, 0x7f, 0x18, 0x70, 0xc0, 0x74, 0xb4,
-            0xcc, 0xa9, 0xb0, 0x7c, 0x1e, 0x44, 0xf8, 0x44,
-            0x7c, 0xde, 0xa3, 0xb7, 0x97, 0xf8, 0xee, 0xae,
-            0xc7, 0xd5, 0xf0, 0x11, 0x8a, 0x82, 0x11, 0xce,
-            0x75, 0x82, 0x73, 0x38, 0xaf, 0x2c, 0x13, 0x19,
-            0xaf, 0xdb, 0xc3, 0x37, 0xb9, 0x9f, 0x31, 0x15,
-            0xb2, 0xbb, 0x1a, 0x0f];
+        let x: [u8, ..52] = [
+            0x20, 0xfc, 0x3e, 0x88, 0xf8, 0x54, 0x17, 0xdf,
+            0xe3, 0x43, 0x89, 0x7f, 0x4b, 0xdf, 0xe5, 0xcd,
+            0xd8, 0xae, 0x9c, 0x3a, 0xc9, 0x3a, 0x0d, 0xc2,
+            0x80, 0xf7, 0x1e, 0x5a, 0x02, 0x75, 0x99, 0x8c,
+            0x80, 0x84, 0xa4, 0x43, 0x27, 0x6a, 0x07, 0xef,
+            0x6f, 0x32, 0x3e, 0x5f, 0x17, 0x30, 0xa9, 0x70,
+            0xb4, 0x42, 0xcc, 0x0a];
 
-        let nn1: B512<DefaultAllocator> = Bytes::from_bytes(n1).unwrap();
-        let xx1: B416<DefaultAllocator> = Bytes::from_bytes(x1).unwrap();
-        let yy1: B416<DefaultAllocator> = Bytes::from_bytes(y1).unwrap();
+        let y: [u8, ..52] = [
+            0x81, 0x59, 0x34, 0xcd, 0xd9, 0xaf, 0x26, 0xf8,
+            0xaf, 0xa6, 0xe5, 0xa4, 0xcd, 0x91, 0x58, 0x82,
+            0xbf, 0x90, 0xa7, 0x7e, 0x6e, 0xc8, 0x27, 0x38,
+            0x49, 0xf5, 0x8e, 0xe2, 0x97, 0x85, 0x20, 0x7b,
+            0x9c, 0xf9, 0x28, 0x44, 0xf1, 0x74, 0x93, 0x7f,
+            0x7e, 0xd9, 0xec, 0xbb, 0xe7, 0xff, 0x1b, 0xae,
+            0xd0, 0x11, 0xd4, 0x1c];
 
-        let nn2: B832<DefaultAllocator> = Bytes::from_bytes(n2).unwrap();
-        let xx2: B416<DefaultAllocator> = Bytes::from_bytes(x2).unwrap();
-        let yy2: B416<DefaultAllocator> = Bytes::from_bytes(y2).unwrap();
+        let n1: Elligator<DefaultAllocator> =
+            Elligator(Bytes::from_bytes(n).unwrap());
+        let xx: B416<DefaultAllocator> = Bytes::from_bytes(x).unwrap();
+        let yy: B416<DefaultAllocator> = Bytes::from_bytes(y).unwrap();
 
-        let p1 = ed::GroupElem::elligator_map_from_bytes(&nn1).unwrap();
-        assert!(xx1 == p1.x.pack());
-        assert!(yy1 == p1.y.pack());
+        let p = ed::GroupElem::elligator_from_representation(&n1).unwrap();
+        assert!(xx == p.x.pack());
+        assert!(yy == p.y.pack());
 
-        let p2 = ed::GroupElem::elligator_map_from_bytes(&nn2).unwrap();
-        assert!(xx2 == p2.x.pack());
-        assert!(yy2 == p2.y.pack());
+        let n2 = p.elligator_to_representation().unwrap();
+        assert!(n1 == n2);
+    }
+
+    #[test]
+    fn test_elligator_s2p() {
+        let b: B512<DefaultAllocator> = Bytes::new_rand();
+        let p1: ed::GroupElem<DefaultAllocator> =
+            ed::GroupElem::elligator_from_bytes(&b).unwrap();
+        let r = p1.elligator_to_representation().unwrap();
+        let p2 = ed::GroupElem::elligator_from_representation(&r).unwrap();
+        assert!(p1 == p2);
+    }
+
+    #[test]
+    fn test_elligator_p2s() {
+        let mut p1: ed::GroupElem<DefaultAllocator>;
+        let mut e: Elligator<DefaultAllocator>;
+        loop {
+            let (p, _) = ed::GroupElem::<DefaultAllocator>::keypair();
+            let r = p.elligator_to_representation();
+            if r.is_some() {
+                e = r.unwrap();
+                p1 = p.clone();
+                break;
+            }
+        }
+        let p2 = ed::GroupElem::elligator_from_representation(&e).unwrap();
+        assert!(p1 == p2);
     }
 
     #[test]
@@ -692,6 +768,7 @@ mod tests {
             0x42, 0x06, 0xd6, 0x6f, 0x9e, 0x4c, 0xfa, 0xa2,
             0x1d, 0xad, 0x2a, 0x00, 0x17, 0x94, 0x26, 0x81,
             0xe5, 0x04, 0xb3, 0x57];
+
         let r: [u8, ..52] = [
             0x8b, 0x1d, 0x99, 0x9e, 0xcb, 0xa5, 0x98, 0xac,
             0xb7, 0x0d, 0xa4, 0x05, 0x99, 0x65, 0xe6, 0xd1,

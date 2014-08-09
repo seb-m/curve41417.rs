@@ -477,16 +477,6 @@ impl<A: Allocator> GroupElem<A> {
         Some(p)
     }
 
-    /// Map a byte-string to a curve point. Return a valid group element
-    /// if `s` produces to a well-defined point. The provided input is
-    /// first reduced in `Fq`. For better uniformity of the distribution
-    /// in `Fq` the input must be sufficiently large (see section 2 of
-    /// ed25519-20110926.pdf).
-    pub fn elligator_from_bytes<T: Bytes + Uniformity>(s: &T)
-                                                       -> Option<GroupElem<A>> {
-        GroupElem::elligator_from_fe(&FieldElem::reduce_weak_from_bytes(s))
-    }
-
     /// Map a byte-string representation to a curve point. Return a valid
     /// group element if it produces to a well-defined point.
     ///
@@ -496,6 +486,21 @@ impl<A: Allocator> GroupElem<A> {
     pub fn elligator_from_representation(r: &Elligator<A>)
                                          -> Option<GroupElem<A>> {
         GroupElem::elligator_from_fe(&FieldElem::unpack(r.get_ref()))
+    }
+
+    /// Map a byte-string to a curve point. Return a valid group element
+    /// if `s` produces to a well-defined point. The provided input is
+    /// first reduced in `Fq`. For better uniformity of the distribution
+    /// in `Fq` the input must be sufficiently large (see section 2 of
+    /// ed25519-20110926.pdf).
+    ///
+    /// Note that since `ψ(r) = ψ(-r)` with `ψ` the mapping function and
+    /// `r = s mod q`, as `r` and `-r` map to the same point, it may lead
+    /// to obtain a non unique result for
+    /// `elligator_to_representation(elligator_from_bytes(s))` in `{r, -r}`.
+    pub fn elligator_from_bytes<T: Bytes + Uniformity>(s: &T)
+                                                       -> Option<GroupElem<A>> {
+        GroupElem::elligator_from_fe(&FieldElem::reduce_weak_from_bytes(s))
     }
 }
 

@@ -47,7 +47,7 @@ For a more detailed example see [curve41417_ops.rs](examples/curve41417_ops.rs).
 
 ## Documentation
 
-The generated documentation is also available [here](http://seb.dbzteam.org/rust-curve41417/curve41417/).
+The generated documentation is also available [here](http://seb.dbzteam.org/curve41417.rs/curve41417/).
 
 
 ## Notes

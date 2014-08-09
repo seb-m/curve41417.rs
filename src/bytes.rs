@@ -320,13 +320,15 @@ macro_rules! wrapper_impl(($name:ident) => (
 /// For instance you might create a new secret key like this:
 ///
 /// ```
-/// use bytes::{B416, Bytes, Scalar, MontPoint};
-/// use mont;
-///
+/// # extern crate curve41417;
+/// # use curve41417::bytes::{B416, Bytes, Scalar, MontPoint};
+/// # use curve41417::mont;
+/// # fn main() {
 /// let mut s: B416 = Bytes::new_rand();
 /// s.clamp_41417();
 /// let sk = Scalar(s);
 /// let pk: MontPoint = mont::scalar_mult_base(&sk);
+/// # }
 /// ```
 pub struct $name<A = DefaultAllocator>(pub B416<A>);
 

@@ -2,7 +2,7 @@
 
 name = "curve41417"
 version = "0.0.1"
-authors = [ "seb@dbzteam.org" ]
+authors = ["Sebastien Martini <seb@dbzteam.org>"]
 
 
 [[lib]]

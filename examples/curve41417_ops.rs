@@ -55,8 +55,7 @@ fn main () {
     // To conclude, some protocols need to perform basic operations directly
     // on scalar vakues modulo the base point's order. The `sc` module
     // provides just that. Let's multiply `42` by `sk`.
-    let sc_sk: ScalarElem<DefaultAllocator> =
-        ScalarElem::unpack(sk.get_ref()).unwrap();
+    let sc_sk: ScalarElem<DefaultAllocator> = ScalarElem::unpack(&sk).unwrap();
     let sc_42: ScalarElem<DefaultAllocator> =
         FromPrimitive::from_u64(42).unwrap();
     let sc_sk42: ScalarElem<DefaultAllocator> = sc_sk * sc_42;

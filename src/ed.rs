@@ -147,7 +147,7 @@ impl<A: Allocator> GroupElem<A> {
          }
     }
 
-    /// Return the base point.
+    /// Return the base point of prime order `L`.
     pub fn base() -> GroupElem<A> {
         let bx: B416<A> = Bytes::from_bytes(BASEX).unwrap();
         let by: B416<A> = Bytes::from_bytes(BASEY).unwrap();
@@ -238,7 +238,7 @@ impl<A: Allocator> GroupElem<A> {
     }
 
     /// Pack a group elem's coordinate `y` along with a sign bit taken from
-    /// its `x` coordinate. This packed point may be unpacked with
+    /// its `x` coordinate. This packed point may later be unpacked with
     /// `unpack()`.
     pub fn pack(&self) -> EdPoint<A> {
         // Pack y
@@ -263,16 +263,18 @@ impl<A: Allocator> GroupElem<A> {
         self.t.cswap(cond, &mut other.t);
     }
 
-    /// Return point `q` such that `q=n.self` where `n` is the scalar value
-    /// applied to the point `self`. Note that the value of `n` is not
-    /// clamped by this method before the scalar multiplication is
-    /// accomplished.
+    /// Return a point `q` such that `q=n.self` where `n` is the scalar
+    /// value applied to the point `self`. Note that the value of `n` is
+    /// not clamped by this method before the scalar multiplication is
+    /// accomplished. Especially no cofactor multiplication is implicitly
+    /// applied. Use `scalar_mult_cofactor()` prior to calling this method
+    /// to explictly pre-cofactor this point.
     ///
     /// This method deliberately takes as input parameter a `B416` scalar
     /// instead of a `ScalarElem` for the reason that in some cases we don't
-    /// want the bits of the scalar to be modified before the scalar
-    /// multiplication. Whereas a `ScalarElem` may automatically be reduced
-    /// `mod L` before any scalar multiplication takes place.
+    /// want the bits of the scalar to be modified before any scalar
+    /// multiplication. Whereas a `ScalarElem` would automatically be reduced
+    /// `mod L` (see `base()`) before any scalar multiplication takes place.
     pub fn scalar_mult(&self, n: &Scalar<A>) -> GroupElem<A> {
         let mut p = self.clone();
         let mut q: GroupElem<A> = GroupElem::neutral();
@@ -287,7 +289,7 @@ impl<A: Allocator> GroupElem<A> {
         q
     }
 
-    /// Return point `q` such that `q=8.self` where `8` is curve's cofactor
+    /// Return a point `q` such that `q=8.self` where `8` is curve's cofactor
     /// applied to this point's instance.
     pub fn scalar_mult_cofactor(&self) -> GroupElem<A> {
         let mut q = *self + *self;
@@ -315,7 +317,7 @@ impl<A: Allocator> GroupElem<A> {
     }
 
     /// Generate keypair `(pk, sk)` such that `pk=sk.BP` with secret scalar
-    /// `sk` appropriately clamped and `pk` the resulting public key.
+    /// `sk` appropriately clamped and `pk` is the resulting public key.
     pub fn keypair() -> (GroupElem<A>, Scalar<A>) {
         let mut sk: B416<A> = Bytes::new_rand();
         sk.clamp_41417();
@@ -324,9 +326,9 @@ impl<A: Allocator> GroupElem<A> {
         (pk, sk_val)
     }
 
-    /// Convert this point's coordinates to Montgomery's x-coordinate.
-    /// This result may be used as input point in `curve41417::mont`
-    /// scalar multiplications.
+    /// Convert this point Edwards coordinates to Montgomery's
+    /// x-coordinate. This result may be used as input point in
+    /// `curve41417::mont` scalar multiplications.
     pub fn to_mont(&self) -> MontPoint<A> {
         let zi = self.z.inv();
         let ty = self.y * zi;
@@ -396,7 +398,6 @@ impl<A: Allocator> GroupElem<A> {
         c = c.pow4125();  // c
 
         // Check u(u+A) is a square i.e. (u*(u+A))^((q-1)/2)=u*(u+A)^3*c^2=1
-        //
         t1 = c.square();
         t = t1 * t;  // t
         if t.parity_bit() == 0 {
@@ -491,8 +492,8 @@ impl<A: Allocator> GroupElem<A> {
     /// Map a byte-string to a curve point. Return a valid group element
     /// if `s` produces to a well-defined point. The provided input is
     /// first reduced in `Fq`. For better uniformity of the distribution
-    /// in `Fq` the input must be sufficiently large (see section 2 of
-    /// ed25519-20110926.pdf).
+    /// in `Fq` the input must be sufficiently large (see rationale
+    /// presented in section 2 of ed25519-20110926.pdf).
     ///
     /// Note that since `ψ(r) = ψ(-r)` with `ψ` the mapping function and
     /// `r = s mod q`, as `r` and `-r` map to the same point, it may lead

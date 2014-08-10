@@ -9,6 +9,15 @@ use std::rand::os::OsRng;
 use std::slice::MutableVector;
 
 
+// Little-endian encodings.
+pub fn u64to8_le(buf: &mut [u8], val: &u64) {
+    assert!(buf.len() >= 8);
+    for i in range(0u, 8) {
+        buf[i] = (*val >> (8 * i)) as u8;
+    }
+}
+
+
 // Zero-out memory buffer.
 #[allow(dead_code)]
 fn zero_memory<T>(b: &mut [T]) {

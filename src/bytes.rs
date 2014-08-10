@@ -313,9 +313,10 @@ macro_rules! wrapper_impl(($name:ident) => (
 /// and returned in crypto operations in order to prevent wrong parameter
 /// passing.
 ///
-/// * `Scalar` denotes a wrapped scalar
-/// * `MontPoint` denotes a wrapped point in Montgomery's representation
-/// * `EdPoint` denotes a wrapped point in Edwards representation
+/// * `Scalar` wraps a scalar value
+/// * `MontPoint` wraps a point in Montgomery's representation
+/// * `EdPoint` wraps a point in Edwards representation
+/// * `Elligator` wraps an indistinguishable Elligator byte-string
 ///
 /// For instance you might create a new secret key like this:
 ///

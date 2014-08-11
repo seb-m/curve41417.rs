@@ -4,9 +4,10 @@ use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 use std::rand::{Rand, Rng};
 
-use bytes::{B416, B832, Bytes, Scalar, Uniformity};
-use sbuf::{Allocator, DefaultAllocator, SBuf};
-use utils;
+use common::sbuf::{Allocator, DefaultAllocator, SBuf};
+use common::utils;
+
+use bytes::{B416, B832, Bytes, Scalar, Reducible};
 
 
 static SCE_SIZE: uint = 52;
@@ -166,11 +167,10 @@ impl<A: Allocator> ScalarElem<A> {
         for i in range(0u, 52) {
             r[i] = (*n)[i] as i64;
         }
-        r[51] &= 0x7; // mask top 5 bits
         r
     }
 
-    fn unpack_w_reduce<T: Bytes + Uniformity>(n: &T) -> ScalarElem<A> {
+    fn unpack_w_reduce<T: Bytes + Reducible>(n: &T) -> ScalarElem<A> {
         let l = n.as_bytes().len();
         let mut t: SBuf<A, i64> = SBuf::new_zero(l);
 
@@ -184,8 +184,7 @@ impl<A: Allocator> ScalarElem<A> {
     }
 
     /// Unpack scalar value `n`. It must represent a value strictly in
-    /// `[0, L-1]`, it is not be reduced on unpacking and its top 5 bits
-    /// are cleared.
+    /// `[0, L-1]` and it should not be expected to be reduced on unpacking.
     pub fn unpack(n: &Scalar<A>) -> Option<ScalarElem<A>> {
         Some(ScalarElem::unpack_wo_reduce(n.get_ref()))
     }
@@ -193,8 +192,8 @@ impl<A: Allocator> ScalarElem<A> {
     /// Unpack bytes `b` as a scalar and reduce it `mod L`. Note that `B832`
     /// instances might provide a better uniformity of distribution on
     /// reductions `mod L`.
-    pub fn unpack_from_bytes<T: Bytes + Uniformity>(b: &T)
-                                                    -> Option<ScalarElem<A>> {
+    pub fn unpack_from_bytes<T: Bytes + Reducible>(b: &T)
+                                                   -> Option<ScalarElem<A>> {
         Some(ScalarElem::unpack_w_reduce(b))
     }
 
@@ -214,7 +213,7 @@ impl<A: Allocator> ScalarElem<A> {
 
     /// Unpack bytes `b` as a scalar, reduce it `mod L` and return the packed
     /// reduced result.
-    pub fn reduce_from_bytes<T: Bytes + Uniformity>(b: &T) -> Scalar<A> {
+    pub fn reduce_from_bytes<T: Bytes + Reducible>(b: &T) -> Scalar<A> {
         ScalarElem::unpack_from_bytes(b).unwrap().pack()
     }
 
@@ -352,9 +351,10 @@ impl<A: Allocator> Collection for ScalarElem<A> {
 
 #[cfg(test)]
 mod tests {
+    use common::sbuf::DefaultAllocator;
+
     use bytes::{B416, B512, B832, Bytes, Scalar};
     use sc::ScalarElem;
-    use sbuf::DefaultAllocator;
 
 
     #[test]

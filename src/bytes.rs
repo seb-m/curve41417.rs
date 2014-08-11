@@ -9,10 +9,11 @@ use std::io::Writer;
 use std::rand::{Rand, Rng};
 use std::slice::bytes;
 
+use common::sbuf::{Allocator, DefaultAllocator, SBuf};
+use common::utils;
+
 use ed::GroupElem;
 use mont;
-use sbuf::{Allocator, DefaultAllocator, SBuf};
-use utils;
 
 
 /// Raw bytes-representation.
@@ -228,8 +229,9 @@ mod $test_mod_id {
     use std::str;
     use std::from_str::FromStr;
 
+    use common::sbuf::DefaultAllocator;
+
     use bytes::{Bytes, $name};
-    use sbuf::DefaultAllocator;
 
 
     #[test]
@@ -294,14 +296,16 @@ bytes_impl!(B832, test_b832, 104)
 
 
 /// Tag `Bytes` containers deemed sufficiently large for providing a good
-/// uniformity of the distribution `mod L`.
-pub trait Uniformity {
+/// uniformity of the distribution when reduced `mod L` (base point's order).
+/// See [this](http://ed25519.cr.yp.to/ed25519-20110926.pdf) rationale
+/// presented in section 2.
+pub trait Reducible {
 }
 
-impl<A: Allocator> Uniformity for B512<A> {
+impl<A: Allocator> Reducible for B512<A> {
 }
 
-impl<A: Allocator> Uniformity for B832<A> {
+impl<A: Allocator> Reducible for B832<A> {
 }
 
 
@@ -451,9 +455,10 @@ impl<A: Allocator> Mul<Scalar<A>, EdPoint<A>> for EdPoint<A> {
 
 #[cfg(test)]
 mod tests {
+    use common::sbuf::DefaultAllocator;
+
     use ed::GroupElem;
     use mont;
-    use sbuf::DefaultAllocator;
 
 
     #[test]

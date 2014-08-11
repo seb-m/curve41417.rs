@@ -3,9 +3,9 @@ use serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 
-use bytes::{B416, Bytes, Uniformity, EdPoint, Elligator, MontPoint, Scalar};
+use bytes::{B416, Bytes, Reducible, EdPoint, Elligator, MontPoint, Scalar};
 use fe::FieldElem;
-use sbuf::{Allocator, DefaultAllocator};
+use common::sbuf::{Allocator, DefaultAllocator};
 
 
 static BASEX: [u8, ..52] = [
@@ -147,7 +147,7 @@ impl<A: Allocator> GroupElem<A> {
          }
     }
 
-    /// Return the base point of prime order `L`.
+    /// Return the base point `(x, 34)` of prime order `L`.
     pub fn base() -> GroupElem<A> {
         let bx: B416<A> = Bytes::from_bytes(BASEX).unwrap();
         let by: B416<A> = Bytes::from_bytes(BASEY).unwrap();
@@ -341,11 +341,12 @@ impl<A: Allocator> GroupElem<A> {
         MontPoint(num.pack())
     }
 
-    /// Use Elligator to encode a curve point to a byte-string representation.
+    /// Use [Elligator](http://elligator.cr.yp.to/) to encode a curve
+    /// point to a byte-string representation.
     pub fn elligator_to_representation(&self) -> Option<Elligator<A>> {
         // Use the following isomorphism:
         //  Eed: x^2 + y^2 = 1 + 3617 x^2 * y^2
-        //  Ew: v^2 = u^3 + A*u^2 + B*u
+        //  Ew:  v^2 = u^3 + A*u^2 + B*u
         //
         // With:
         //  d=3617
@@ -492,15 +493,14 @@ impl<A: Allocator> GroupElem<A> {
     /// Map a byte-string to a curve point. Return a valid group element
     /// if `s` produces to a well-defined point. The provided input is
     /// first reduced in `Fq`. For better uniformity of the distribution
-    /// in `Fq` the input must be sufficiently large (see rationale
-    /// presented in section 2 of ed25519-20110926.pdf).
+    /// in `Fq` the input must be sufficiently large.
     ///
     /// Note that since `ψ(r) = ψ(-r)` with `ψ` the mapping function and
     /// `r = s mod q`, as `r` and `-r` map to the same point, it may lead
     /// to obtain a non unique result for
     /// `elligator_to_representation(elligator_from_bytes(s))` in `{r, -r}`.
-    pub fn elligator_from_bytes<T: Bytes + Uniformity>(s: &T)
-                                                       -> Option<GroupElem<A>> {
+    pub fn elligator_from_bytes<T: Bytes + Reducible>(s: &T)
+                                                      -> Option<GroupElem<A>> {
         GroupElem::elligator_from_fe(&FieldElem::reduce_weak_from_bytes(s))
     }
 }
@@ -605,10 +605,11 @@ impl<A: Allocator> Eq for GroupElem<A> {
 mod tests {
     use test::Bencher;
 
+    use common::sbuf::DefaultAllocator;
+
     use bytes::{B416, B512, Bytes, Scalar, Elligator};
     use ed;
     use mont;
-    use sbuf::DefaultAllocator;
 
 
     #[test]
@@ -620,6 +621,36 @@ mod tests {
         let ssk2 = pk1 * sk2;
 
         assert!(ssk1 == ssk2);
+    }
+
+    #[test]
+    fn test_dh_ref() {
+        let n: [u8, ..52] = [
+            0x3c, 0xe9, 0x11, 0x83, 0x62, 0xd8, 0x44, 0x96,
+            0x8a, 0x6b, 0xbf, 0x76, 0x5b, 0xd2, 0x33, 0xb0,
+            0xda, 0x3b, 0x89, 0x04, 0x4b, 0xd8, 0xdb, 0xc4,
+            0x95, 0xe2, 0xbc, 0x01, 0xdc, 0xaf, 0x1d, 0x9a,
+            0x42, 0x06, 0xd6, 0x6f, 0x9e, 0x4c, 0xfa, 0xa2,
+            0x1d, 0xad, 0x2a, 0x00, 0x17, 0x94, 0x26, 0x81,
+            0xe5, 0x04, 0xb3, 0x57];
+
+        let r: [u8, ..52] = [
+            0x8b, 0x1d, 0x99, 0x9e, 0xcb, 0xa5, 0x98, 0xac,
+            0xb7, 0x0d, 0xa4, 0x05, 0x99, 0x65, 0xe6, 0xd1,
+            0x2c, 0x73, 0xc2, 0x78, 0xef, 0x6a, 0x58, 0xac,
+            0x45, 0xcb, 0x5d, 0xe5, 0xd9, 0x7c, 0xc5, 0x43,
+            0xce, 0x1d, 0x04, 0xe2, 0xfd, 0x85, 0x48, 0xe4,
+            0x16, 0x49, 0xe8, 0xca, 0x32, 0x72, 0x1d, 0xba,
+            0x47, 0x29, 0xa5, 0x09];
+
+        let mut scn: B416<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
+        let scr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
+        let bp = ed::GroupElem::<DefaultAllocator>::base();
+
+        scn.clamp_41417();
+        let q = bp * Scalar(scn);
+
+        assert!(q.pack().unwrap() == scr);
     }
 
     #[test]
@@ -826,36 +857,6 @@ mod tests {
         }
         let p2 = ed::GroupElem::elligator_from_representation(&e).unwrap();
         assert!(p1 == p2);
-    }
-
-    #[test]
-    fn test_dh_ref() {
-        let n: [u8, ..52] = [
-            0x3c, 0xe9, 0x11, 0x83, 0x62, 0xd8, 0x44, 0x96,
-            0x8a, 0x6b, 0xbf, 0x76, 0x5b, 0xd2, 0x33, 0xb0,
-            0xda, 0x3b, 0x89, 0x04, 0x4b, 0xd8, 0xdb, 0xc4,
-            0x95, 0xe2, 0xbc, 0x01, 0xdc, 0xaf, 0x1d, 0x9a,
-            0x42, 0x06, 0xd6, 0x6f, 0x9e, 0x4c, 0xfa, 0xa2,
-            0x1d, 0xad, 0x2a, 0x00, 0x17, 0x94, 0x26, 0x81,
-            0xe5, 0x04, 0xb3, 0x57];
-
-        let r: [u8, ..52] = [
-            0x8b, 0x1d, 0x99, 0x9e, 0xcb, 0xa5, 0x98, 0xac,
-            0xb7, 0x0d, 0xa4, 0x05, 0x99, 0x65, 0xe6, 0xd1,
-            0x2c, 0x73, 0xc2, 0x78, 0xef, 0x6a, 0x58, 0xac,
-            0x45, 0xcb, 0x5d, 0xe5, 0xd9, 0x7c, 0xc5, 0x43,
-            0xce, 0x1d, 0x04, 0xe2, 0xfd, 0x85, 0x48, 0xe4,
-            0x16, 0x49, 0xe8, 0xca, 0x32, 0x72, 0x1d, 0xba,
-            0x47, 0x29, 0xa5, 0x09];
-
-        let mut scn: B416<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
-        let scr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
-        let bp = ed::GroupElem::<DefaultAllocator>::base();
-
-        scn.clamp_41417();
-        let q = bp * Scalar(scn);
-
-        assert!(q.pack().unwrap() == scr);
     }
 
     #[bench]

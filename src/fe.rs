@@ -3,9 +3,10 @@ use serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 
-use bytes::{B416, Bytes, Uniformity};
-use sbuf::{Allocator, SBuf};
-use utils;
+use common::utils;
+use common::sbuf::{Allocator, SBuf};
+
+use bytes::{B416, Bytes, Reducible};
 
 
 static FE_SIZE: uint = 26;
@@ -114,8 +115,8 @@ impl<A: Allocator> FieldElem<A> {
 
     // Reduce n mod 2^416 - 68 and put limbs between [0, 2^16-1] through carry.
     // Requirement: 52 < n.len() <= 104
-    pub fn reduce_weak_from_bytes<T: Bytes + Uniformity>(n: &T)
-                                                         -> FieldElem<A> {
+    pub fn reduce_weak_from_bytes<T: Bytes + Reducible>(n: &T)
+                                                        -> FieldElem<A> {
         let l = n.as_bytes().len() / 2;
         assert!(l > 26 && l <= 52);
 

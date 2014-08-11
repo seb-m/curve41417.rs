@@ -23,9 +23,10 @@ extern crate alloc;
 extern crate libc;
 extern crate serialize;
 
-// Common modules
-mod utils;
-pub mod sbuf;
+extern crate common;
+
+// Reexport common modules
+pub use common::sbuf;
 
 // Curve41417
 pub mod bytes;

@@ -1,10 +1,10 @@
 [package]
-
 name = "curve41417"
 version = "0.0.1"
 authors = ["Sebastien Martini <seb@dbzteam.org>"]
 
-
 [[lib]]
-
 name = "curve41417"
+
+[dependencies.common]
+git = "https://github.com/seb-m/common.rs"

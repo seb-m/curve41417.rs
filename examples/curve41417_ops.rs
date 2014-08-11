@@ -57,7 +57,7 @@ fn main () {
     // provides just that. Let's multiply `42` by `sk`.
     let sc_sk: ScalarElem<DefaultAllocator> = ScalarElem::unpack(&sk).unwrap();
     let sc_42: ScalarElem<DefaultAllocator> =
-        FromPrimitive::from_u64(42).unwrap();
+        FromPrimitive::from_u64(1).unwrap();
     let sc_sk42: ScalarElem<DefaultAllocator> = sc_sk * sc_42;
 
     // We can also pack the result and multiply it to its base point to see if

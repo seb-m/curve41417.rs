@@ -2,9 +2,10 @@
 //!
 //! Generate public and private keys in Montgomery's representation
 //! and handle scalar multiplications.
+use common::sbuf::{Allocator, DefaultAllocator};
+
 use bytes::{B416, Bytes, MontPoint, Scalar};
 use fe::FieldElem;
-use sbuf::{Allocator, DefaultAllocator};
 
 
 static BASEX: [u8, ..52] = [
@@ -128,9 +129,10 @@ pub fn keypair<A: Allocator = DefaultAllocator>() -> (MontPoint<A>, Scalar<A>) {
 mod tests {
     use test::Bencher;
 
+    use common::sbuf::DefaultAllocator;
+
     use bytes::{B416, Bytes, Scalar};
     use mont;
-    use sbuf::DefaultAllocator;
 
 
     #[test]

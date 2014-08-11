@@ -3,12 +3,12 @@ env:
     - secure: wXF4dA/vp6THwiTlwSgdVadfUJRCQ9+oMzxh/C/RJbhkIv/5/CbkIbG+liVz8Oz0DFx6p8Mdp/jhSXfUwO36ijp4+keyTWzGfF9eP09/KynbXmOl8ssW45cwTrOtPxoYWOlbjpg8WdFHdnZxYeYZxio3FUVwvdOhMSexanOIExM=
     - LD_LIBRARY_PATH: /usr/local/lib
 install:
-  - wget http://www.rust-lang.org/rustup.sh
+  - wget https://static.rust-lang.org/rustup.sh
   - sudo sh ./rustup.sh
   - rustc -v
 script:
   - cargo build --verbose
-  - cargo doc --verbose
+  - cargo doc --no-deps --verbose
   - mv target/doc doc
 after_script:
   - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh

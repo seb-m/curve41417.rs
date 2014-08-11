@@ -1,7 +1,3 @@
-.PHONY: doc
-doc:
-	rustdoc src/lib.rs
-
 clean:
 	rm -rf doc/
 	rm -rf target/

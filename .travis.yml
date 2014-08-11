@@ -2,12 +2,10 @@ env:
   global:
     - secure: wXF4dA/vp6THwiTlwSgdVadfUJRCQ9+oMzxh/C/RJbhkIv/5/CbkIbG+liVz8Oz0DFx6p8Mdp/jhSXfUwO36ijp4+keyTWzGfF9eP09/KynbXmOl8ssW45cwTrOtPxoYWOlbjpg8WdFHdnZxYeYZxio3FUVwvdOhMSexanOIExM=
     - LD_LIBRARY_PATH: /usr/local/lib
-before_install:
-  - sudo add-apt-repository --yes ppa:hansjorg/rust
-  - sudo add-apt-repository --yes ppa:cmrx64/cargo
-  - sudo apt-get update -qq
 install:
-  - sudo apt-get install -qq rust-nightly cargo
+  - wget http://www.rust-lang.org/rustup.sh
+  - sudo sh ./rustup.sh
+  - rustc -v
 script:
   - cargo build --verbose
   - cargo doc --verbose

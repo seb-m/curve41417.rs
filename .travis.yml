@@ -3,8 +3,7 @@ env:
     - secure: wXF4dA/vp6THwiTlwSgdVadfUJRCQ9+oMzxh/C/RJbhkIv/5/CbkIbG+liVz8Oz0DFx6p8Mdp/jhSXfUwO36ijp4+keyTWzGfF9eP09/KynbXmOl8ssW45cwTrOtPxoYWOlbjpg8WdFHdnZxYeYZxio3FUVwvdOhMSexanOIExM=
     - LD_LIBRARY_PATH: /usr/local/lib
 install:
-  - wget https://static.rust-lang.org/rustup.sh
-  - sudo sh ./rustup.sh
+  - curl https://static.rust-lang.org/rustup.sh | sudo sh
   - rustc -v
 script:
   - cargo build --verbose

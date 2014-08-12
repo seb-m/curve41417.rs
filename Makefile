@@ -1,3 +1,6 @@
+doc:
+	cargo doc --no-deps
+
 clean:
 	rm -rf doc/
 	rm -rf target/

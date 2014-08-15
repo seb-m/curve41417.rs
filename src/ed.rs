@@ -531,6 +531,13 @@ impl<A: Allocator> Add<GroupElem<A>, GroupElem<A>> for GroupElem<A> {
     }
 }
 
+impl<A: Allocator> Sub<GroupElem<A>, GroupElem<A>> for GroupElem<A> {
+    /// Subtract points.
+    fn sub(&self, other: &GroupElem<A>) -> GroupElem<A> {
+        self + (-other)
+    }
+}
+
 impl<A: Allocator> Neg<GroupElem<A>> for GroupElem<A> {
     /// Negate point.
     fn neg(&self) -> GroupElem<A> {
@@ -660,9 +667,9 @@ mod tests {
             b = b + ed::GroupElem::<DefaultAllocator>::base();
         }
 
-        let nb = -ed::GroupElem::<DefaultAllocator>::base();
+        let nb = ed::GroupElem::<DefaultAllocator>::base();
         for _ in range(0u, 10) {
-            b = b + nb;
+            b = b - nb;
         }
 
         assert!(ed::GroupElem::base() == b);

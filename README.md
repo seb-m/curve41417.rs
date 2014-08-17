@@ -18,8 +18,8 @@ $ cargo build
 * Run tests, examples, benchmarks and build documentation:
 
 ```
-$ cargo test  # Run tests and build examples under target/
-$ cargo test --bench
+$ cargo test  # Run tests and build examples under target/test/
+$ cargo bench
 $ cargo doc   # Build documentation under target/doc/
 ```
 

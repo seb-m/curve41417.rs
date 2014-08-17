@@ -21,4 +21,4 @@
 /.rust/
 /tmp/
 Cargo.lock
-
+doc.sh

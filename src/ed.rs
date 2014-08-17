@@ -534,7 +534,7 @@ impl<A: Allocator> Add<GroupElem<A>, GroupElem<A>> for GroupElem<A> {
 impl<A: Allocator> Sub<GroupElem<A>, GroupElem<A>> for GroupElem<A> {
     /// Subtract points.
     fn sub(&self, other: &GroupElem<A>) -> GroupElem<A> {
-        self + (-other)
+        *self + (-other)
     }
 }
 

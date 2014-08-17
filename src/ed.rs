@@ -543,7 +543,7 @@ impl<A: Allocator> Neg<GroupElem<A>> for GroupElem<A> {
     fn neg(&self) -> GroupElem<A> {
         let mut r = self.clone();
         r.x = -r.x;
-        r.t = r.x * r.y;
+        r.t = -r.t;
         r
     }
 }

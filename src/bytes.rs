@@ -339,15 +339,15 @@ pub struct $name<A = DefaultAllocator>(pub B416<A>);
 
 impl<A: Allocator> $name<A> {
     /// Return the wrapped value as a reference.
-    pub fn get_ref(&self) -> &B416<A> {
+    pub fn get(&self) -> &B416<A> {
         let &$name(ref val) = self;
         val
     }
 
     /// Return a reference to the byte at index `index`. Fails if
     /// `index` is out of bounds.
-    pub fn get(&self, index: uint) -> &u8 {
-        self.get_ref().get(index)
+    pub fn get_byte(&self, index: uint) -> &u8 {
+        self.get().get(index)
     }
 
     /// Return the wrapped value, consume `self`.
@@ -359,13 +359,13 @@ impl<A: Allocator> $name<A> {
 
 impl<A: Allocator> Clone for $name<A> {
     fn clone(&self) -> $name<A> {
-        $name(self.get_ref().clone())
+        $name(self.get().clone())
     }
 }
 
 impl<A: Allocator> PartialEq for $name<A> {
     fn eq(&self, other: &$name<A>) -> bool {
-        self.get_ref() == other.get_ref()
+        self.get() == other.get()
     }
 }
 
@@ -375,13 +375,13 @@ impl<A: Allocator> Eq for $name<A> {
 impl<A: Allocator> fmt::Show for $name<A> {
     /// Format as hex-string.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.get_ref().fmt(f)
+        self.get().fmt(f)
     }
 }
 
 impl<A: Allocator, E, S: Encoder<E>> Encodable<S, E> for $name<A> {
     fn encode(&self, s: &mut S) -> Result<(), E> {
-        self.get_ref().encode(s)
+        self.get().encode(s)
     }
 }
 
@@ -394,13 +394,13 @@ impl<A: Allocator, E, D: Decoder<E>> Decodable<D, E> for $name<A> {
 
 impl<A: Allocator> Index<uint, u8> for $name<A> {
     fn index(&self, index: &uint) -> &u8 {
-        self.get(*index)
+        self.get_byte(*index)
     }
 }
 
 impl<A: Allocator> ToHex for $name<A> {
     fn to_hex(&self) -> String {
-        self.get_ref().to_hex()
+        self.get().to_hex()
     }
 }
 
@@ -481,6 +481,6 @@ mod tests {
 
         let sk2 = sk.clone();
         assert!(sk2 == sk);
-        assert!(sk2.get_ref() == sk.get_ref());
+        assert!(sk2.get() == sk.get());
     }
 }

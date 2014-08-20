@@ -200,7 +200,7 @@ impl<A: Allocator> GroupElem<A> {
     /// `bytes` representation. `bytes` must hold a packed point wrapped
     /// in `EdPoint`, usually a previous result obtained from `pack()`.
     pub fn unpack(bytes: &EdPoint<A>) -> Option<GroupElem<A>> {
-        let b = bytes.get_ref();
+        let b = bytes.get();
         let mut r: GroupElem<A> = GroupElem::new();
 
         // Unpack y, top 2 bits are discarded in FieldElem::unpack().
@@ -487,7 +487,7 @@ impl<A: Allocator> GroupElem<A> {
     /// `elligator_to_representation()`.
     pub fn elligator_from_representation(r: &Elligator<A>)
                                          -> Option<GroupElem<A>> {
-        GroupElem::elligator_from_fe(&FieldElem::unpack(r.get_ref()))
+        GroupElem::elligator_from_fe(&FieldElem::unpack(r.get()))
     }
 
     /// Map a byte-string to a curve point. Return a valid group element

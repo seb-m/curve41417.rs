@@ -57,13 +57,13 @@ pub fn scalar_mult<A: Allocator = DefaultAllocator>(n: &Scalar<A>,
     let mut r: u8;
 
     // Unpack p, top 2 bits are discarded in FieldElem::unpack().
-    pe = FieldElem::unpack(p.get_ref());
+    pe = FieldElem::unpack(p.get());
     a = FieldElem::new();
     b = pe.clone();
     c = FieldElem::new();
     d = FieldElem::new();
 
-    z = n.get_ref().clone();
+    z = n.get().clone();
     z.clamp_41417();
 
     a[0] = 1;

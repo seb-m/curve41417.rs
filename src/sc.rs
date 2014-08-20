@@ -186,7 +186,7 @@ impl<A: Allocator> ScalarElem<A> {
     /// Unpack scalar value `n`. It must represent a value strictly in
     /// `[0, L-1]` and it should not be expected to be reduced on unpacking.
     pub fn unpack(n: &Scalar<A>) -> Option<ScalarElem<A>> {
-        Some(ScalarElem::unpack_wo_reduce(n.get_ref()))
+        Some(ScalarElem::unpack_wo_reduce(n.get()))
     }
 
     /// Unpack bytes `b` as a scalar and reduce it `mod L`. Note that `B832`

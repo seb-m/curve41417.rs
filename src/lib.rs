@@ -29,6 +29,9 @@ extern crate common;
 pub use common::sbuf;
 
 // Curve41417
+pub static POINT_SIZE: uint = 52;
+pub static SCALAR_SIZE: uint = 52;
+
 pub mod bytes;
 mod fe;
 pub mod mont;

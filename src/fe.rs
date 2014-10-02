@@ -36,7 +36,7 @@ impl<A: Allocator> FieldElem<A> {
 
     pub fn one() -> FieldElem<A> {
         FieldElem {
-            elem: SBuf::from_slice(ONE.as_slice())
+            elem: SBuf::from_slice(ONE[])
         }
     }
 
@@ -74,9 +74,7 @@ impl<A: Allocator> FieldElem<A> {
     }
 
     pub fn cswap(&mut self, cond: i64, other: &mut FieldElem<A>) {
-        utils::bytes_cswap::<i64>(cond,
-                                  self.elem.as_mut_slice(),
-                                  other.elem.as_mut_slice());
+        utils::bytes_cswap::<i64>(cond, self.elem[mut], other.elem[mut]);
     }
 
     pub fn carry(&self) -> FieldElem<A> {

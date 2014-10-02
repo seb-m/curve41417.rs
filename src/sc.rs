@@ -80,9 +80,7 @@ impl<A: Allocator> ScalarElem<A> {
     // as condition and must be `0` or `1` strictly. Values are swapped iff
     // `cond == 1`.
     fn cswap(&mut self, cond: i64, other: &mut ScalarElem<A>) {
-        utils::bytes_cswap::<i64>(cond,
-                                  self.elem.as_mut_slice(),
-                                  other.elem.as_mut_slice());
+        utils::bytes_cswap::<i64>(cond, self.elem[mut], other.elem[mut]);
     }
 
     // Requirements: len >= 52
@@ -179,7 +177,7 @@ impl<A: Allocator> ScalarElem<A> {
         }
 
         let mut r: ScalarElem<A> = ScalarElem::new_zero();
-        r.reduce_weak(t.as_slice());
+        r.reduce_weak(t[]);
         r
     }
 
@@ -284,7 +282,7 @@ impl<A: Allocator> Mul<ScalarElem<A>, ScalarElem<A>> for ScalarElem<A> {
         }
 
         let mut r: ScalarElem<A> = ScalarElem::new_zero();
-        r.reduce_weak(t.as_slice());
+        r.reduce_weak(t[]);
         r
     }
 }

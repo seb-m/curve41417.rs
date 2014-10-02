@@ -120,13 +120,13 @@ impl<A: Allocator> Bytes for $name<A> {
 
     /// Return a reference on the internal bytes as a byte slice.
     fn as_bytes(&self) -> &[u8] {
-        self.bytes.as_slice()
+        self.bytes[]
     }
 
     /// Return a mutable reference on the internal bytes as a mutable byte
     /// slice.
     fn as_mut_bytes(&mut self) -> &mut [u8] {
-        self.bytes.as_mut_slice()
+        self.bytes[mut]
     }
 }
 
@@ -187,7 +187,7 @@ impl<A: Allocator> FromStr for $name<A> {
             return None
         }
 
-        Bytes::from_bytes(b.unwrap().as_slice())
+        Bytes::from_bytes(b.unwrap()[])
     }
 }
 
@@ -250,8 +250,7 @@ mod $test_mod_id {
         let mut w = MemWriter::new();
         assert!(write!(&mut w, "{}", c).is_ok());
         let d: $name<DefaultAllocator> =
-            FromStr::from_str(str::from_utf8(w.unwrap()
-                                             .as_slice())
+            FromStr::from_str(str::from_utf8(w.unwrap()[])
                               .unwrap()).unwrap();
         assert!(d == c);
 

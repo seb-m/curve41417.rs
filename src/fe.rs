@@ -9,9 +9,9 @@ use common::sbuf::{Allocator, SBuf};
 use bytes::{B416, Bytes, Reducible};
 
 
-static FE_SIZE: uint = 26;
+const FE_SIZE: uint = 26;
 
-static ONE: [i64, ..FE_SIZE] = [
+const ONE: [i64, ..FE_SIZE] = [
     1, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,

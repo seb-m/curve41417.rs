@@ -8,7 +8,7 @@ use fe::FieldElem;
 use common::sbuf::{Allocator, DefaultAllocator};
 
 
-static BASEX: [u8, ..52] = [
+const BASEX: [u8, ..52] = [
     0x95, 0xc5, 0xcb, 0xf3, 0x12, 0x38, 0xfd, 0xc4,
     0x64, 0x7c, 0x53, 0xa8, 0xfa, 0x73, 0x1a, 0x30,
     0x11, 0xa1, 0x6b, 0x6d, 0x4d, 0xab, 0xa4, 0x98,
@@ -18,7 +18,7 @@ static BASEX: [u8, ..52] = [
     0x05, 0x49, 0x33, 0x1a
 ];
 
-static BASEY: [u8, ..52] = [
+const BASEY: [u8, ..52] = [
     0x22, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -28,7 +28,7 @@ static BASEY: [u8, ..52] = [
     0, 0, 0, 0
 ];
 
-static BASEZ: [u8, ..52] = [
+const BASEZ: [u8, ..52] = [
     0x01, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -38,7 +38,7 @@ static BASEZ: [u8, ..52] = [
     0, 0, 0, 0
 ];
 
-static BASET: [u8, ..52] = [
+const BASET: [u8, ..52] = [
     0xa7, 0x3e, 0x10, 0x61, 0x84, 0x72, 0xa1, 0x29,
     0x62, 0x85, 0x16, 0x5b, 0x4a, 0x67, 0x83, 0x63,
     0x48, 0x64, 0x4b, 0x88, 0x48, 0xc0, 0xde, 0x45,
@@ -48,7 +48,7 @@ static BASET: [u8, ..52] = [
     0xac, 0xb2, 0xcf, 0x3a
 ];
 
-static B1: [u8, ..52] = [
+const B1: [u8, ..52] = [
     0x01, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -58,7 +58,7 @@ static B1: [u8, ..52] = [
     0, 0, 0, 0
 ];
 
-static BMINUS1: [u8, ..52] = [
+const BMINUS1: [u8, ..52] = [
     0xee, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -68,7 +68,7 @@ static BMINUS1: [u8, ..52] = [
     0xff, 0xff, 0xff, 0x3f
 ];
 
-static EDD: [u8, ..52] = [
+const EDD: [u8, ..52] = [
     0x21, 0x0e, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -78,7 +78,7 @@ static EDD: [u8, ..52] = [
     0, 0, 0, 0
 ];
 
-static MONTA: [u8, ..52] = [
+const MONTA: [u8, ..52] = [
     0x11, 0x07, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -88,7 +88,7 @@ static MONTA: [u8, ..52] = [
     0, 0, 0, 0
 ];
 
-static MONTB: [u8, ..52] = [
+const MONTB: [u8, ..52] = [
     0x40, 0x78, 0x0c, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -98,7 +98,7 @@ static MONTB: [u8, ..52] = [
     0, 0, 0, 0
 ];
 
-static MONTB1: [u8, ..52] = [
+const MONTB1: [u8, ..52] = [
     0x76, 0xd9, 0xa0, 0xc9, 0x97, 0x0d, 0x9a, 0x7c,
     0xd9, 0xa0, 0xc9, 0x97, 0x0d, 0x9a, 0x7c, 0xd9,
     0xa0, 0xc9, 0x97, 0x0d, 0x9a, 0x7c, 0xd9, 0xa0,

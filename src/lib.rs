@@ -17,7 +17,6 @@
 #![feature(phase)]
 
 #[cfg(test)] extern crate test;
-#[cfg(test)] extern crate debug;
 #[cfg(test)] #[phase(plugin, link)] extern crate log;
 
 extern crate serialize;

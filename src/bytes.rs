@@ -159,7 +159,7 @@ impl<A: Allocator, E, D: Decoder<E>> Decodable<D, E> for $name<A> {
         if s.len() != $size {
             // Would prefer to return Err() here but the type may clash
             // with the type of the Decoder.
-            fail!("Can't decode, invalid size.");
+            panic!("Can't decode, invalid size.");
         }
         Ok($name {
             bytes: s

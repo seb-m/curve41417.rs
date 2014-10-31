@@ -288,7 +288,7 @@ impl<A: Allocator> Mul<ScalarElem<A>, ScalarElem<A>> for ScalarElem<A> {
 }
 
 impl<A: Allocator> FromPrimitive for ScalarElem<A> {
-    #[allow(unused_variable)]
+    #[allow(unused_variables)]
     fn from_i64(n: i64) -> Option<ScalarElem<A>> {
         None
     }

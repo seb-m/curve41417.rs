@@ -20,7 +20,7 @@ use mont;
 ///
 /// Used to pass data as input argument and for returning results in
 /// crypto operations.
-pub trait Bytes: PartialEq + Eq + Rand + fmt::Show + Clone + Collection +
+pub trait Bytes: PartialEq + Eq + Rand + fmt::Show + Clone +
     Index<uint, u8> + IndexMut<uint, u8> {
     /// Return a new element with all its bytes set to zero.
     fn new_zero() -> Self;
@@ -39,6 +39,8 @@ pub trait Bytes: PartialEq + Eq + Rand + fmt::Show + Clone + Collection +
         bytes::copy_memory(nb.as_mut_bytes(), bytes);
         Some(nb)
     }
+
+    fn len(&self) -> uint;
 
     /// Return a reference on the internal bytes as a byte slice.
     fn as_bytes(&self) -> &[u8];
@@ -105,6 +107,10 @@ impl<A: Allocator> $name<A> {
 }
 
 impl<A: Allocator> Bytes for $name<A> {
+    fn len(&self) -> uint {
+        self.bytes.len()
+    }
+
     /// Return a new instance initialized to zero.
     fn new_zero() -> $name<A> {
         $name {
@@ -206,12 +212,6 @@ impl<A: Allocator> Rand for $name<A> {
         let mut n: $name<A> = Bytes::new_zero();
         rng.fill_bytes(n.as_mut_bytes());
         n
-    }
-}
-
-impl<A: Allocator> Collection for $name<A> {
-    fn len(&self) -> uint {
-        self.bytes.len()
     }
 }
 

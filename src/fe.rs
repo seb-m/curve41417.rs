@@ -73,6 +73,10 @@ impl<A: Allocator> FieldElem<A> {
         r
     }
 
+    pub fn len(&self) -> uint {
+        self.elem.len()
+    }
+
     pub fn cswap(&mut self, cond: i64, other: &mut FieldElem<A>) {
         utils::bytes_cswap::<i64>(cond, self.elem[mut], other.elem[mut]);
     }
@@ -296,10 +300,4 @@ impl<A: Allocator> PartialEq for FieldElem<A> {
 }
 
 impl<A: Allocator> Eq for FieldElem<A> {
-}
-
-impl<A: Allocator> Collection for FieldElem<A> {
-    fn len(&self) -> uint {
-        self.elem.len()
-    }
 }

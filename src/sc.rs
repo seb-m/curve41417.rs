@@ -76,6 +76,10 @@ impl<A: Allocator> ScalarElem<A> {
         self.elem.get_mut(index)
     }
 
+    pub fn len(&self) -> uint {
+        self.elem.len()
+    }
+
     // Conditionally swap this scalar element with `other`. `cond` serves
     // as condition and must be `0` or `1` strictly. Values are swapped iff
     // `cond == 1`.
@@ -337,12 +341,6 @@ impl<A: Allocator> PartialEq for ScalarElem<A> {
     /// Constant-time equality comparison.
     fn eq(&self, other: &ScalarElem<A>) -> bool {
         self.pack() == other.pack()
-    }
-}
-
-impl<A: Allocator> Collection for ScalarElem<A> {
-    fn len(&self) -> uint {
-        self.elem.len()
     }
 }
 

@@ -2,7 +2,7 @@
 
 ## Description
 
-A pure-[Rust](http://www.rust-lang.org/) implementation of [Curve41417](http://safecurves.cr.yp.to/).
+A pure-[Rust](http://www.rust-lang.org/) implementation of [Curve41417](http://safecurves.cr.yp.to/). This code is experimental, don't use it for anything real.
 
 
 ## Building from source

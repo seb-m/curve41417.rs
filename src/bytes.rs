@@ -25,7 +25,8 @@ pub trait Bytes: PartialEq + Eq + Rand + fmt::Show + Clone +
     /// Return a new element with all its bytes set to zero.
     fn new_zero() -> Self;
 
-    /// Return a new random element (use urandom as PRNG).
+    /// Return a new random element. Use `OsRng` (which uses
+    /// `/dev/[u]random` on Unix) as PRNG.
     fn new_rand() -> Self;
 
     /// Return a new instance from a byte slice.
@@ -118,7 +119,8 @@ impl<A: Allocator> Bytes for $name<A> {
         }
     }
 
-    /// Return a new randomly generated instance (use urandom as PRNG).
+    /// Return a new randomly generated instance. Use `OsRng` (which
+    /// uses `/dev/[u]random` on Unix) as PRNG.
     fn new_rand() -> $name<A> {
         let rng = &mut utils::urandom_rng();
         Rand::rand(rng)

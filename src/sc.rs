@@ -49,7 +49,7 @@ impl<A: Allocator> ScalarElem<A> {
     }
 
     /// Generate a new random `ScalarElem` between `[0, L-1]`.
-    /// Use `urandom` as PRNG.
+    /// Use `OsRng` (which uses `/dev/[u]random` on Unix) as PRNG.
     pub fn new_rand() -> ScalarElem<A> {
         let rng = &mut utils::urandom_rng();
         Rand::rand(rng)

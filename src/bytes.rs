@@ -4,10 +4,10 @@
 use serialize::{Encodable, Encoder, Decodable, Decoder};
 use serialize::hex::{FromHex, ToHex};
 use std::fmt;
-use std::from_str::FromStr;
 use std::io::Writer;
 use std::rand::{Rand, Rng};
 use std::slice::bytes;
+use std::str::FromStr;
 
 use common::sbuf::{Allocator, DefaultAllocator, SBuf};
 use common::utils;
@@ -228,8 +228,7 @@ impl<A: Allocator> ToHex for $name<A> {
 mod $test_mod_id {
     use std::io::MemWriter;
     use std::rand::{Rng, Rand};
-    use std::str;
-    use std::from_str::FromStr;
+    use std::str::{mod, FromStr};
 
     use common::sbuf::DefaultAllocator;
 

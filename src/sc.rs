@@ -426,8 +426,8 @@ mod tests {
             0x30, 0x1a, 0x76, 0x81, 0xcd, 0x24, 0xcf, 0x5c,
             0xde, 0x19, 0x67, 0x03];
 
-        let nn: B416<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
-        let rr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
+        let nn: B416<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
+        let rr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
 
         let a = ScalarElem::unpack(&Scalar(nn)).unwrap();
 
@@ -459,8 +459,8 @@ mod tests {
             0x9e, 0x28, 0x2f, 0xce, 0x0e, 0x34, 0xf9, 0xb2,
             0x91, 0xb3, 0x31, 0x06];
 
-        let nn: B512<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
-        let rr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
+        let nn: B512<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
+        let rr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
 
         let a = ScalarElem::unpack_from_bytes(&nn).unwrap();
 
@@ -497,8 +497,8 @@ mod tests {
             0xf5, 0x8e, 0xd8, 0xc7, 0x66, 0xcc, 0x3c, 0x23,
             0xde, 0x63, 0x9d, 0x01];
 
-        let nn: B832<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
-        let rr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
+        let nn: B832<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
+        let rr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
 
         let a = ScalarElem::unpack_from_bytes(&nn).unwrap();
 
@@ -530,8 +530,8 @@ mod tests {
             0x8d, 0x51, 0xcc, 0xef, 0x87, 0xa4, 0x0d, 0x2c,
             0x87, 0xb0, 0xdd, 0x07];
 
-        let nn: B512<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
-        let rr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
+        let nn: B512<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
+        let rr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
 
         let s = ScalarElem::unpack_from_bytes(&nn).unwrap();
         assert!(s.pack().unwrap() == rr);
@@ -563,8 +563,8 @@ mod tests {
             0xd4, 0x42, 0x49, 0xcf, 0x33, 0x49, 0x07, 0xdf,
             0xb1, 0x3a, 0xee, 0x00];
 
-        let nn: B832<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
-        let rr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
+        let nn: B832<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
+        let rr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
 
         let s = ScalarElem::unpack_from_bytes(&nn).unwrap();
         assert!(s.pack().unwrap() == rr);
@@ -582,7 +582,7 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0];
 
-        let bb: B416<DefaultAllocator> = Bytes::from_bytes(b).unwrap();
+        let bb: B416<DefaultAllocator> = Bytes::from_bytes(&b).unwrap();
 
         let s1 = ScalarElem::unpack(&Scalar(bb)).unwrap();
         let s2: ScalarElem<DefaultAllocator> = FromPrimitive::from_u64(n).unwrap();

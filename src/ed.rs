@@ -149,10 +149,10 @@ impl<A: Allocator> GroupElem<A> {
 
     /// Return the base point `(x, 34)` of prime order `L`.
     pub fn base() -> GroupElem<A> {
-        let bx: B416<A> = Bytes::from_bytes(BASEX).unwrap();
-        let by: B416<A> = Bytes::from_bytes(BASEY).unwrap();
-        let bz: B416<A> = Bytes::from_bytes(BASEZ).unwrap();
-        let bt: B416<A> = Bytes::from_bytes(BASET).unwrap();
+        let bx: B416<A> = Bytes::from_bytes(&BASEX).unwrap();
+        let by: B416<A> = Bytes::from_bytes(&BASEY).unwrap();
+        let bz: B416<A> = Bytes::from_bytes(&BASEZ).unwrap();
+        let bt: B416<A> = Bytes::from_bytes(&BASET).unwrap();
 
         GroupElem {
             x: FieldElem::unpack(&bx),
@@ -163,30 +163,30 @@ impl<A: Allocator> GroupElem<A> {
     }
 
     fn b1() -> B416<A> {
-        Bytes::from_bytes(B1).unwrap()
+        Bytes::from_bytes(&B1).unwrap()
     }
 
     fn bminus1() -> B416<A> {
-        Bytes::from_bytes(BMINUS1).unwrap()
+        Bytes::from_bytes(&BMINUS1).unwrap()
     }
 
     fn edd() -> FieldElem<A> {
-        let bedd: B416<A> = Bytes::from_bytes(EDD).unwrap();
+        let bedd: B416<A> = Bytes::from_bytes(&EDD).unwrap();
         FieldElem::unpack(&bedd)
     }
 
     fn monta() -> FieldElem<A> {
-        let a: B416<A> = Bytes::from_bytes(MONTA).unwrap();
+        let a: B416<A> = Bytes::from_bytes(&MONTA).unwrap();
         FieldElem::unpack(&a)
     }
 
     fn montb() -> FieldElem<A> {
-        let b: B416<A> = Bytes::from_bytes(MONTB).unwrap();
+        let b: B416<A> = Bytes::from_bytes(&MONTB).unwrap();
         FieldElem::unpack(&b)
     }
 
     fn montb1() -> FieldElem<A> {
-        let b1: B416<A> = Bytes::from_bytes(MONTB1).unwrap();
+        let b1: B416<A> = Bytes::from_bytes(&MONTB1).unwrap();
         FieldElem::unpack(&b1)
     }
 
@@ -650,8 +650,8 @@ mod tests {
             0x16, 0x49, 0xe8, 0xca, 0x32, 0x72, 0x1d, 0xba,
             0x47, 0x29, 0xa5, 0x09];
 
-        let mut scn: B416<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
-        let scr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
+        let mut scn: B416<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
+        let scr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
         let bp = ed::GroupElem::<DefaultAllocator>::base();
 
         scn.clamp_41417();
@@ -763,9 +763,9 @@ mod tests {
             0xd0, 0x11, 0xd4, 0x1c];
 
         let n1: Elligator<DefaultAllocator> =
-            Elligator(Bytes::from_bytes(n).unwrap());
-        let xx: B416<DefaultAllocator> = Bytes::from_bytes(x).unwrap();
-        let yy: B416<DefaultAllocator> = Bytes::from_bytes(y).unwrap();
+            Elligator(Bytes::from_bytes(&n).unwrap());
+        let xx: B416<DefaultAllocator> = Bytes::from_bytes(&x).unwrap();
+        let yy: B416<DefaultAllocator> = Bytes::from_bytes(&y).unwrap();
 
         let p = ed::GroupElem::elligator_from_representation(&n1).unwrap();
         assert!(xx == p.x.pack());
@@ -823,13 +823,13 @@ mod tests {
             0x57, 0x83, 0xcb, 0x02, 0xfc, 0x4c, 0x4a, 0x49,
             0xe8, 0x83, 0xe9, 0x22];
 
-        let n1: B512<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
-        let xx: B416<DefaultAllocator> = Bytes::from_bytes(x).unwrap();
-        let yy: B416<DefaultAllocator> = Bytes::from_bytes(y).unwrap();
+        let n1: B512<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
+        let xx: B416<DefaultAllocator> = Bytes::from_bytes(&x).unwrap();
+        let yy: B416<DefaultAllocator> = Bytes::from_bytes(&y).unwrap();
         let rr1: Elligator<DefaultAllocator> =
-            Elligator(Bytes::from_bytes(r1).unwrap());
+            Elligator(Bytes::from_bytes(&r1).unwrap());
         let rr2: Elligator<DefaultAllocator> =
-            Elligator(Bytes::from_bytes(r2).unwrap());
+            Elligator(Bytes::from_bytes(&r2).unwrap());
 
         let p = ed::GroupElem::elligator_from_bytes(&n1).unwrap();
         assert!(xx == p.x.pack());

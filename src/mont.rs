@@ -29,11 +29,11 @@ const A24: [u8, ..52] = [
 ];
 
 fn basex<A: Allocator>() -> MontPoint<A> {
-    MontPoint(Bytes::from_bytes(BASEX).unwrap())
+    MontPoint(Bytes::from_bytes(&BASEX).unwrap())
 }
 
 fn a24<A: Allocator>() -> FieldElem<A> {
-    let b: B416<A> = Bytes::from_bytes(A24).unwrap();
+    let b: B416<A> = Bytes::from_bytes(&A24).unwrap();
     FieldElem::unpack(&b)
 }
 
@@ -166,8 +166,8 @@ mod tests {
             0x79, 0x26, 0x67, 0x18, 0xa9, 0x07, 0x11, 0x21,
             0x84, 0xb8, 0xd7, 0x1c];
 
-        let scn: B416<DefaultAllocator> = Bytes::from_bytes(n).unwrap();
-        let scr: B416<DefaultAllocator> = Bytes::from_bytes(r).unwrap();
+        let scn: B416<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
+        let scr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
 
         let scrr = mont::scalar_mult_base(&Scalar(scn)).unwrap();
         assert!(scr == scrr);

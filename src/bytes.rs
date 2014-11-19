@@ -241,8 +241,8 @@ mod $test_mod_id {
         for i in range(0u, $size) {
             t[i] = i as u8;
         }
-        let a: $name<DefaultAllocator> = Bytes::from_bytes(t).unwrap();
-        let b: $name<DefaultAllocator> = Bytes::from_bytes(t).unwrap();
+        let a: $name<DefaultAllocator> = Bytes::from_bytes(&t).unwrap();
+        let b: $name<DefaultAllocator> = Bytes::from_bytes(&t).unwrap();
         let c: $name<DefaultAllocator> = Bytes::new_rand();
 
         assert!(a == b);

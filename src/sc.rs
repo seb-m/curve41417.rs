@@ -4,10 +4,10 @@ use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 use std::rand::{Rand, Rng};
 
-use common::sbuf::{Allocator, DefaultAllocator, SBuf};
-use common::utils;
+use tars::allocator::Allocator;
+use tars::{ProtBuf, ProtBuf8};
 
-use bytes::{B416, B832, Bytes, Scalar, Reducible};
+use common::{mod, BYTES_SIZE};
 
 
 const SCE_SIZE: uint = 52;
@@ -38,8 +38,8 @@ const LD: [u8, ..27] = [
 ///
 /// Provide commons Curve41417 scalar operations computed `mod L`, where
 /// `L` is the prime order of the base point `ed::base()` currently used.
-pub struct ScalarElem<A = DefaultAllocator> {
-    elem: SBuf<A, i64>
+pub struct ScalarElem<A> {
+    elem: ProtBuf<A, i64>
 }
 
 impl<A: Allocator> ScalarElem<A> {
@@ -51,14 +51,14 @@ impl<A: Allocator> ScalarElem<A> {
     /// Generate a new random `ScalarElem` between `[0, L-1]`.
     /// Use `OsRng` (which uses `/dev/[u]random` on Unix) as PRNG.
     pub fn new_rand() -> ScalarElem<A> {
-        let rng = &mut utils::urandom_rng();
+        let rng = &mut common::os_rng();
         Rand::rand(rng)
     }
 
-    /// Return scalar value representing `0`.
+    /// Return scalar value representing zero.
     pub fn zero() -> ScalarElem<A> {
         ScalarElem {
-            elem: SBuf::new_zero(SCE_SIZE)
+            elem: ProtBuf::new_zero(SCE_SIZE)
         }
     }
 
@@ -84,7 +84,7 @@ impl<A: Allocator> ScalarElem<A> {
     // as condition and must be `0` or `1` strictly. Values are swapped iff
     // `cond == 1`.
     fn cswap(&mut self, cond: i64, other: &mut ScalarElem<A>) {
-        utils::bytes_cswap::<i64>(cond, self.elem[mut], other.elem[mut]);
+        common::bytes_cswap::<i64>(cond, self.elem[mut], other.elem[mut]);
     }
 
     // Requirements: len >= 52
@@ -93,14 +93,14 @@ impl<A: Allocator> ScalarElem<A> {
         let mut carry: i64;
 
         for i in range(0u, top) {
-            (*self)[i] += 1_i64 << 8;
-            carry = (*self)[i] >> 8;
+            self[i] += 1_i64 << 8;
+            carry = self[i] >> 8;
             self[i + 1] += carry - 1;
             self[i] -= carry << 8;
         }
 
         self[top] += 1_i64 << 8;
-        carry = (*self)[top] >> 8;
+        carry = self[top] >> 8;
         for i in range(0u, 27) {
             self[top - 51 + i] += (carry - 1) * (LD[i] as i64);
         }
@@ -114,7 +114,7 @@ impl<A: Allocator> ScalarElem<A> {
         assert!(n.len() > 52);
         assert!(n.len() <= 104);
 
-        let mut t: SBuf<A, i64> = SBuf::new_zero(78);
+        let mut t: ProtBuf<A, i64> = ProtBuf::new_zero(78);
         for i in range(0u, 52) {
             t[i] = n[i];
         }
@@ -146,8 +146,8 @@ impl<A: Allocator> ScalarElem<A> {
         // Eliminate multiples of 2^411
         let mut carry: i64 = 0;
         for i in range(0u, 52) {
-            self[i] += carry - ((*self)[51] >> 3) * (L[i] as i64);
-            carry = (*self)[i] >> 8;
+            self[i] += carry - (self[51] >> 3) * (L[i] as i64);
+            carry = self[i] >> 8;
             self[i] &= 0xff;
         }
 
@@ -155,29 +155,28 @@ impl<A: Allocator> ScalarElem<A> {
         let mut m: ScalarElem<A> = ScalarElem::new_zero();
         carry = 0;
         for i in range(0u, 52) {
-            m[i] = (*self)[i] + carry - (L[i] as i64);
+            m[i] = self[i] + carry - (L[i] as i64);
             carry = m[i] >> 8;
             m[i] &= 0xff;
         }
         self.cswap(1 - (carry & 1), &mut m);
     }
 
-    fn unpack_wo_reduce(n: &B416<A>) -> ScalarElem<A> {
+    fn unpack_wo_reduce(n: &[u8]) -> ScalarElem<A> {
+        // Note: would be great to also check/assert that n is in [0, L - 1].
         let mut r: ScalarElem<A> = ScalarElem::new_zero();
 
-        // Note: would be great to also check/assert that n is in [0, L - 1].
         for i in range(0u, 52) {
-            r[i] = (*n)[i] as i64;
+            r[i] = n[i] as i64;
         }
         r
     }
 
-    fn unpack_w_reduce<T: Bytes + Reducible>(n: &T) -> ScalarElem<A> {
-        let l = n.as_bytes().len();
-        let mut t: SBuf<A, i64> = SBuf::new_zero(l);
+    fn unpack_w_reduce(n: &[u8]) -> ScalarElem<A> {
+        let mut t: ProtBuf<A, i64> = ProtBuf::new_zero(n.len());
 
-        for i in range(0u, l) {
-            t[i] = (*n)[i] as i64;
+        for i in range(0u, n.len()) {
+            t[i] = n[i] as i64;
         }
 
         let mut r: ScalarElem<A> = ScalarElem::new_zero();
@@ -185,43 +184,54 @@ impl<A: Allocator> ScalarElem<A> {
         r
     }
 
-    /// Unpack scalar value `n`. It must represent a value strictly in
-    /// `[0, L-1]` and it should not be expected to be reduced on unpacking.
-    pub fn unpack(n: &Scalar<A>) -> Option<ScalarElem<A>> {
-        Some(ScalarElem::unpack_wo_reduce(n.get()))
-    }
-
-    /// Unpack bytes `b` as a scalar and reduce it `mod L`. Note that `B832`
-    /// instances might provide a better uniformity of distribution on
-    /// reductions `mod L`.
-    pub fn unpack_from_bytes<T: Bytes + Reducible>(b: &T)
-                                                   -> Option<ScalarElem<A>> {
-        Some(ScalarElem::unpack_w_reduce(b))
-    }
-
-    /// Pack the current scalar value reduced `mod L`. It is not until
-    /// this method is called that the scalar element is reduced to its
-    /// canonical form.
-    pub fn pack(&self) -> Scalar<A> {
+    /// Pack the current scalar value reduced `mod L`. Note: it is not
+    /// until this method is called that the scalar element is reduced to
+    /// its canonical form.
+    pub fn pack<B: Allocator>(&self) -> ProtBuf8<B> {
         let mut t = self.clone();
         t.reduce();
 
-        let mut b: B416<A> = Bytes::new_zero();
-        for i in range(0u, 52) {
+        let mut b: ProtBuf8<B> = ProtBuf::new_zero(BYTES_SIZE);
+        for i in range(0u, BYTES_SIZE) {
             b[i] = (t[i] & 0xff) as u8;
         }
-        Scalar(b)
-    }
-
-    /// Unpack bytes `b` as a scalar, reduce it `mod L` and return the packed
-    /// reduced result.
-    pub fn reduce_from_bytes<T: Bytes + Reducible>(b: &T) -> Scalar<A> {
-        ScalarElem::unpack_from_bytes(b).unwrap().pack()
+        b
     }
 
     /// Check if `self` is equal to `0`.
     pub fn is_zero(&self) -> bool {
         *self == ScalarElem::zero()
+    }
+}
+
+impl<A: Allocator, T: AsSlice<u8>> ScalarElem<A> {
+    /// Unpack scalar value `n`. It must represent a value strictly in
+    /// `[0, L-1]` and it should not be expected to be reduced on unpacking.
+    pub fn unpack(n: &T) -> Option<ScalarElem<A>> {
+        let nb = n.as_slice();
+        match nb.len() {
+            BYTES_SIZE => Some(ScalarElem::unpack_wo_reduce(nb)),
+            _ => None
+        }
+    }
+
+    /// Unpack bytes `b` as a scalar and reduce it `mod L`. It is expected
+    /// to be of a large enough size in order to provide a good uniformity
+    /// of distribution on reductions `mod L`. Thus `b` must be between
+    /// `[64, 104]` bytes.
+    pub fn unpack_from_bytes(b: &T) -> Option<ScalarElem<A>> {
+        let nb = b.as_slice();
+        match nb.len() {
+            64...104 => Some(ScalarElem::unpack_w_reduce(nb)),
+            _ => None
+        }
+    }
+
+    /// Unpack bytes `b` as a scalar, reduce it `mod L` and return the
+    /// packed reduced result. See `unpack_from_bytes()` for more details
+    /// on performed unpacking.
+    pub fn reduce_from_bytes<B: Allocator>(b: &T) -> ProtBuf8<B> {
+        ScalarElem::<A, T>::unpack_from_bytes(b).unwrap().pack::<B>()
     }
 }
 
@@ -277,7 +287,7 @@ impl<A: Allocator> Neg<ScalarElem<A>> for ScalarElem<A> {
 impl<A: Allocator> Mul<ScalarElem<A>, ScalarElem<A>> for ScalarElem<A> {
     /// Multiply scalars.
     fn mul(&self, other: &ScalarElem<A>) -> ScalarElem<A> {
-        let mut t: SBuf<A, i64> = SBuf::new_zero(103);
+        let mut t: ProtBuf<A, i64> = ProtBuf::new_zero(103);
 
         for i in range(0u, 52) {
             for j in range(0u, 52) {
@@ -298,9 +308,9 @@ impl<A: Allocator> FromPrimitive for ScalarElem<A> {
     }
 
     fn from_u64(n: u64) -> Option<ScalarElem<A>> {
-        let mut s: B416<A> = Bytes::new_zero();
-        utils::u64to8_le(s.as_mut_bytes(), &n);
-        ScalarElem::unpack(&Scalar(s))
+        let mut s: ProtBuf8<A> = ProtBuf::new_zero(BYTES_SIZE);
+        common::u64to8_le(s[mut], &n);
+        ScalarElem::unpack(&s)
     }
 }
 
@@ -316,7 +326,7 @@ impl<A: Allocator> Rand for ScalarElem<A> {
     /// is not clamped. Be sure to use a secure PRNG when calling this
     /// method. For instance `ScalarElem::new_rand()` uses urandom.
     fn rand<R: Rng>(rng: &mut R) -> ScalarElem<A> {
-        let b: B832<A> = Rand::rand(rng);
+        let b: ProtBuf8<A> = ProtBuf::new_rand(104, rng);
         ScalarElem::unpack_from_bytes(&b).unwrap()
     }
 }
@@ -324,13 +334,13 @@ impl<A: Allocator> Rand for ScalarElem<A> {
 impl<A: Allocator> Show for ScalarElem<A> {
     /// Format as hex-string.
     fn fmt(&self, f: &mut Formatter) -> Result {
-        self.pack().fmt(f)
+        self.pack::<A>().fmt(f)
     }
 }
 
 impl<A: Allocator> ToHex for ScalarElem<A> {
     fn to_hex(&self) -> String {
-        self.pack().to_hex()
+        self.pack::<A>().to_hex()
     }
 }
 
@@ -340,22 +350,21 @@ impl<A: Allocator> Eq for ScalarElem<A> {
 impl<A: Allocator> PartialEq for ScalarElem<A> {
     /// Constant-time equality comparison.
     fn eq(&self, other: &ScalarElem<A>) -> bool {
-        self.pack() == other.pack()
+        self.pack::<A>() == other.pack::<A>()
     }
 }
 
 
 #[cfg(test)]
 mod tests {
-    use common::sbuf::DefaultAllocator;
+    use tars::{BufAlloc, ProtBuf, ProtBuf8};
 
-    use bytes::{B416, B512, B832, Bytes, Scalar};
     use sc::ScalarElem;
 
 
     #[test]
-    fn test_ops_b416() {
-        let a: ScalarElem<DefaultAllocator> = ScalarElem::new_rand();
+    fn test_ops_52() {
+        let a: ScalarElem<BufAlloc> = ScalarElem::new_rand();
 
         let apa = a + a;
         let aaa1 = a * apa;
@@ -371,9 +380,9 @@ mod tests {
     }
 
     #[test]
-    fn test_ops_b512() {
-        let n1: B512<DefaultAllocator> = Bytes::new_rand();
-        let a: ScalarElem<DefaultAllocator> =
+    fn test_ops_64() {
+        let n1: ProtBuf8<BufAlloc> = ProtBuf::new_rand_os(104);
+        let a: ScalarElem<BufAlloc> =
             ScalarElem::unpack_from_bytes(&n1).unwrap();
 
         let apa = a + a;
@@ -389,9 +398,9 @@ mod tests {
     }
 
     #[test]
-    fn test_ops_b832() {
-        let n1: B832<DefaultAllocator> = Bytes::new_rand();
-        let a: ScalarElem<DefaultAllocator> =
+    fn test_ops_104() {
+        let n1: ProtBuf8<BufAlloc> = ProtBuf::new_rand_os(104);
+        let a: ScalarElem<BufAlloc> =
             ScalarElem::unpack_from_bytes(&n1).unwrap();
 
         let apa = a + a;
@@ -407,7 +416,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ops_416_ref() {
+    fn test_ops_52_ref() {
         let n: [u8, ..52] = [
             0xf6, 0xf0, 0x53, 0xb3, 0x79, 0x46, 0x2d, 0x51,
             0xc9, 0xea, 0xcf, 0xef, 0x0e, 0x4d, 0xaa, 0xbe,
@@ -426,20 +435,15 @@ mod tests {
             0x30, 0x1a, 0x76, 0x81, 0xcd, 0x24, 0xcf, 0x5c,
             0xde, 0x19, 0x67, 0x03];
 
-        let nn: B416<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
-        let rr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
-
-        let a = ScalarElem::unpack(&Scalar(nn)).unwrap();
-
+        let a: ScalarElem<BufAlloc> = ScalarElem::unpack(&n.as_slice()).unwrap();
         let apa = a + a;
         let aaa1 = a * apa;
         let s = aaa1 - a;
-
-        assert!(s.pack().unwrap() == rr);
+        assert!(s.pack::<BufAlloc>()[] == r[]);
     }
 
     #[test]
-    fn test_ops_512_ref() {
+    fn test_ops_64_ref() {
         let n: [u8, ..64] = [
             0xf3, 0xa5, 0x35, 0x47, 0xec, 0xcf, 0xa6, 0x84,
             0x03, 0x7f, 0xaa, 0x34, 0x62, 0x7a, 0xb6, 0x2e,
@@ -459,20 +463,16 @@ mod tests {
             0x9e, 0x28, 0x2f, 0xce, 0x0e, 0x34, 0xf9, 0xb2,
             0x91, 0xb3, 0x31, 0x06];
 
-        let nn: B512<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
-        let rr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
-
-        let a = ScalarElem::unpack_from_bytes(&nn).unwrap();
-
+        let a: ScalarElem<BufAlloc> =
+            ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
         let apa = a + a;
         let aaa1 = a * apa;
         let s = aaa1 - a;
-
-        assert!(s.pack().unwrap() == rr);
+        assert!(s.pack::<BufAlloc>()[] == r[]);
     }
 
     #[test]
-    fn test_ops_832_ref() {
+    fn test_ops_104_ref() {
         let n: [u8, ..104] = [
             0x14, 0x48, 0x03, 0x95, 0x83, 0x87, 0x9a, 0x7d,
             0xb6, 0x36, 0x02, 0x97, 0xa0, 0x2c, 0x25, 0x2d,
@@ -497,20 +497,16 @@ mod tests {
             0xf5, 0x8e, 0xd8, 0xc7, 0x66, 0xcc, 0x3c, 0x23,
             0xde, 0x63, 0x9d, 0x01];
 
-        let nn: B832<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
-        let rr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
-
-        let a = ScalarElem::unpack_from_bytes(&nn).unwrap();
-
+        let a: ScalarElem<BufAlloc> =
+            ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
         let apa = a + a;
         let aaa1 = a * apa;
         let s = aaa1 - a;
-
-        assert!(s.pack().unwrap() == rr);
+        assert!(s.pack::<BufAlloc>()[] == r[]);
     }
 
     #[test]
-    fn test_modl_512_ref() {
+    fn test_modl_64_ref() {
         let n: [u8, ..64] = [
             0xf3, 0xa5, 0x35, 0x47, 0xec, 0xcf, 0xa6, 0x84,
             0x03, 0x7f, 0xaa, 0x34, 0x62, 0x7a, 0xb6, 0x2e,
@@ -530,15 +526,13 @@ mod tests {
             0x8d, 0x51, 0xcc, 0xef, 0x87, 0xa4, 0x0d, 0x2c,
             0x87, 0xb0, 0xdd, 0x07];
 
-        let nn: B512<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
-        let rr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
-
-        let s = ScalarElem::unpack_from_bytes(&nn).unwrap();
-        assert!(s.pack().unwrap() == rr);
+        let s: ScalarElem<BufAlloc> =
+            ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
+        assert!(s.pack::<BufAlloc>()[] == r[]);
     }
 
     #[test]
-    fn test_modl_832_ref() {
+    fn test_modl_104_ref() {
         let n: [u8, ..104] = [
             0x14, 0x48, 0x03, 0x95, 0x83, 0x87, 0x9a, 0x7d,
             0xb6, 0x36, 0x02, 0x97, 0xa0, 0x2c, 0x25, 0x2d,
@@ -563,11 +557,9 @@ mod tests {
             0xd4, 0x42, 0x49, 0xcf, 0x33, 0x49, 0x07, 0xdf,
             0xb1, 0x3a, 0xee, 0x00];
 
-        let nn: B832<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
-        let rr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
-
-        let s = ScalarElem::unpack_from_bytes(&nn).unwrap();
-        assert!(s.pack().unwrap() == rr);
+        let s: ScalarElem<BufAlloc> =
+            ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
+        assert!(s.pack::<BufAlloc>()[] == r[]);
     }
 
     #[test]
@@ -582,11 +574,8 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0];
 
-        let bb: B416<DefaultAllocator> = Bytes::from_bytes(&b).unwrap();
-
-        let s1 = ScalarElem::unpack(&Scalar(bb)).unwrap();
-        let s2: ScalarElem<DefaultAllocator> = FromPrimitive::from_u64(n).unwrap();
-
+        let s1 = ScalarElem::unpack(&b.as_slice()).unwrap();
+        let s2: ScalarElem<BufAlloc> = FromPrimitive::from_u64(n).unwrap();
         assert!(s1 == s2);
     }
 }

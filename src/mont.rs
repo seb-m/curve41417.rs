@@ -1,10 +1,11 @@
 //! Montgomery-form Curve41417 representation
 //!
-//! Generate public and private keys in Montgomery's representation
-//! and handle scalar multiplications.
-use common::sbuf::{Allocator, DefaultAllocator};
+//! Generate public and secret keys in Montgomery's representation and
+//! handle scalar multiplications.
+use tars::allocator::{Allocator, KeyAllocator};
+use tars::{ProtBuf, ProtKey, ProtBuf8, ProtKey8};
 
-use bytes::{B416, Bytes, MontPoint, Scalar};
+use common::{SCALAR_SIZE, Scalar};
 use fe::FieldElem;
 
 
@@ -28,25 +29,22 @@ const A24: [u8, ..52] = [
     0x26, 0x5f, 0x36, 0x26
 ];
 
-fn basex<A: Allocator>() -> MontPoint<A> {
-    MontPoint(Bytes::from_bytes(&BASEX).unwrap())
-}
-
 fn a24<A: Allocator>() -> FieldElem<A> {
-    let b: B416<A> = Bytes::from_bytes(&A24).unwrap();
-    FieldElem::unpack(&b)
+    FieldElem::unpack(&A24).unwrap()
 }
 
 
 /// Compute scalar multiplication
 ///
 /// Return a packed point `q` such that `q=n.p`, `n` is a scalar and `p` is
-/// a point. On input, `n` is clamped by this function before performing
-/// its scalar multiplication.
-pub fn scalar_mult<A: Allocator = DefaultAllocator>(n: &Scalar<A>,
-                                                    p: &MontPoint<A>)
-                                                    -> MontPoint<A> {
-    let mut z: B416<A>;
+/// a point. On input, `n` is clamped before performing the scalar
+/// multiplication.
+pub fn scalar_mult<A, T, U>(n: &T, p: &U) -> ProtBuf8<A>
+    where A: Allocator,
+          T: AsSlice<u8>,
+          U: AsSlice<u8>
+{
+    let mut z: ProtBuf8<A>;
     let mut a: FieldElem<A>;
     let mut b: FieldElem<A>;
     let mut c: FieldElem<A>;
@@ -57,13 +55,13 @@ pub fn scalar_mult<A: Allocator = DefaultAllocator>(n: &Scalar<A>,
     let mut r: u8;
 
     // Unpack p, top 2 bits are discarded in FieldElem::unpack().
-    pe = FieldElem::unpack(p.get());
+    pe = FieldElem::unpack(p.as_slice()).unwrap();
     a = FieldElem::new();
     b = pe.clone();
     c = FieldElem::new();
     d = FieldElem::new();
 
-    z = n.get().clone();
+    z = ProtBuf::from_slice(n.as_slice());
     z.clamp_41417();
 
     a[0] = 1;
@@ -97,31 +95,29 @@ pub fn scalar_mult<A: Allocator = DefaultAllocator>(n: &Scalar<A>,
 
     c = c.inv();
     a = a * c;
-    MontPoint(a.pack())
+    a.pack()
 }
 
 /// Compute scalar multiplication with base point
 ///
 /// Return a packed point `q` such that `q=n.BP`. Where `BP` is the base
 /// point and `n` a scalar value.
-pub fn scalar_mult_base<A: Allocator = DefaultAllocator>(n: &Scalar<A>)
-                                                         -> MontPoint<A> {
-    scalar_mult(n, &basex())
+pub fn scalar_mult_base<A, T>(n: &T) -> ProtBuf8<A>
+    where A: Allocator,
+          T: AsSlice<u8>
+{
+    scalar_mult(n, &BASEX.as_slice())
 }
 
-/// Generate a new key pair
+/// Generate a new secret key
 ///
-/// A new key pair `(pk, sk)` is generated. `sk` is a secret key randomly
-/// generated and used as scalar value to compute the public key `pk`
-/// where `pk=sk.BP` with `BP` as base point. `sk` is clamped (see
-/// `B416::clamp_41417()`). The scalar value is returned wrapped in
-/// `Scalar` and the public key is wrapped in `MontPoint`.
-pub fn keypair<A: Allocator = DefaultAllocator>() -> (MontPoint<A>, Scalar<A>) {
-    let mut sk: B416<A> = Bytes::new_rand();
+/// A new secret key is randomly generated, clamped and returned. It can be
+/// used as scalar value to compute a public key `pk` such that `pk=sk.BP`
+/// with `BP` as base point by calling `scalar_mult_base()`.
+pub fn gen_key<K: KeyAllocator>() -> ProtKey8<K> {
+    let mut sk: ProtBuf8<K> = ProtBuf::new_rand_os(SCALAR_SIZE);
     sk.clamp_41417();
-    let sk_val: Scalar<A> = Scalar(sk);
-    let pk_val: MontPoint<A> = scalar_mult_base(&sk_val);
-    (pk_val, sk_val)
+    ProtKey::new(sk)
 }
 
 
@@ -129,22 +125,23 @@ pub fn keypair<A: Allocator = DefaultAllocator>() -> (MontPoint<A>, Scalar<A>) {
 mod tests {
     use test::Bencher;
 
-    use common::sbuf::DefaultAllocator;
+    use tars::{BufAlloc, KeyAlloc, ProtBuf, ProtBuf8, ProtKey8};
 
-    use bytes::{B416, Bytes, Scalar};
+    use common::SCALAR_SIZE;
     use mont;
 
 
     #[test]
     fn test_dh_rand() {
-        let (pk1, sk1) = mont::keypair::<DefaultAllocator>();
-        let (pk2, sk2) = mont::keypair::<DefaultAllocator>();
+        let sk1: ProtKey8<KeyAlloc> = mont::gen_key();
+        let pk1: ProtBuf8<BufAlloc> = mont::scalar_mult_base(&sk1.read());
+        let sk2: ProtKey8<KeyAlloc> = mont::gen_key();
+        let pk2: ProtBuf8<BufAlloc> = mont::scalar_mult_base(&sk2.read());
 
-        let ssk1w = mont::scalar_mult(&sk1, &pk2);
-        let ssk2w = mont::scalar_mult(&sk2, &pk1);
+        let ssk1w: ProtBuf8<BufAlloc> = mont::scalar_mult(&sk1.read(), &pk2);
+        let ssk2w: ProtBuf8<KeyAlloc> = mont::scalar_mult(&sk2.read(), &pk1);
 
-        assert!(ssk1w == ssk2w);
-        assert!(ssk1w.unwrap() == ssk2w.unwrap());
+        assert!(ssk1w[] == ssk2w[]);
     }
 
     #[test]
@@ -166,27 +163,25 @@ mod tests {
             0x79, 0x26, 0x67, 0x18, 0xa9, 0x07, 0x11, 0x21,
             0x84, 0xb8, 0xd7, 0x1c];
 
-        let scn: B416<DefaultAllocator> = Bytes::from_bytes(&n).unwrap();
-        let scr: B416<DefaultAllocator> = Bytes::from_bytes(&r).unwrap();
-
-        let scrr = mont::scalar_mult_base(&Scalar(scn)).unwrap();
-        assert!(scr == scrr);
+        let rr: ProtBuf8<BufAlloc> = mont::scalar_mult_base(&n.as_slice());
+        assert!(r[] == rr[]);
     }
 
     #[bench]
     fn bench_scalar_mult_base(b: &mut Bencher) {
-        let n: Scalar<DefaultAllocator> = Scalar(Bytes::new_rand());
+        let sk: ProtKey8<KeyAlloc> = mont::gen_key();
         b.iter(|| {
-            mont::scalar_mult_base(&n);
+            let _: ProtBuf8<BufAlloc> = mont::scalar_mult_base(&sk.read());
         })
     }
 
     #[bench]
     fn bench_scalar_mult(b: &mut Bencher) {
-        let (pk, _) = mont::keypair::<DefaultAllocator>();
-        let n: Scalar<DefaultAllocator> = Scalar(Bytes::new_rand());
+        let sk: ProtKey8<KeyAlloc> = mont::gen_key();
+        let pk: ProtBuf8<BufAlloc> = mont::scalar_mult_base(&sk.read());
+        let n: ProtBuf8<KeyAlloc> = ProtBuf::new_rand_os(SCALAR_SIZE);
         b.iter(|| {
-            mont::scalar_mult(&n, &pk);
+            let _: ProtBuf8<BufAlloc> = mont::scalar_mult(&n, &pk);
         })
     }
 }

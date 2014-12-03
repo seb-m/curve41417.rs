@@ -1,30 +1,27 @@
-#![feature(default_type_params)]
-
+extern crate tars;
 extern crate curve41417;
 
-use curve41417::bytes::{B416, Bytes, Scalar};
+use tars::{BufAlloc, KeyAlloc, ProtBuf8, ProtKey8};
 use curve41417::ed::GroupElem;
 use curve41417::mont;
 use curve41417::sc::ScalarElem;
-use curve41417::sbuf::DefaultAllocator;
 
 
 fn main () {
-    // Disclaimer: most of the points illustrated in the code below may
-    // seem a bit contrived and doesn't make much sense as it is, but the
-    // main goal here is to show a wide array of what's possible with this
-    // library.
+    // Note: most of the points illustrated in the code below may seem
+    // a bit contrived without making much sense as it is. But the main
+    // goal here is just to show few examples on how to use this lib.
 
     // Let's instanciate a new key pair in Montgomery's representation.
-    // `DefaultAllocator` represents a memory allocator used to allocate
-    // memory buffers for this variable and for internal temporary buffers
-    // used in crypto operations. This type parameter is optional and
-    // defaults to `DefaultAllocator` when not provided.
-    let (pkm, sk) = mont::keypair::<DefaultAllocator>();
+    // `*Alloc` represent memory allocators used to allocate memory
+    // buffers for keys and internal temporary buffers used in crypto
+    // operations.
+    let sk: ProtKey8<KeyAlloc> = mont::gen_key();
+    let pkm: ProtBuf8<BufAlloc> = mont::scalar_mult_base(&sk.read());
 
-    // `sk` is a generic scalar and is clamped so we can use it as is to
-    // compute the corresponding public key in Edwards representation.
-    let pke: GroupElem<DefaultAllocator> = GroupElem::base().scalar_mult(&sk);
+    // `sk` is a secret key and is clamped so we can use it to compute its
+    // corresponding public key in Edwards representation.
+    let pke: GroupElem<BufAlloc> = GroupElem::base().scalar_mult(&sk.read());
 
     // In this case `pke` is not a packed value but still a group element
     // this is because we might want to apply others operations without
@@ -34,38 +31,22 @@ fn main () {
     // Moreover, at this point `pkm` and `pke` are expected to represent
     // the same point but in different representations. We can check that,
     // simply by converting `pke` to its Montgomery's representation.
-    let pke_m = pke.to_mont();
-    println!("[pkm == pke_m]: {} == {}", pkm, pke_m);
+    let pke_m = pke.to_mont::<BufAlloc>();
     assert!(pkm == pke_m);
 
-    // To prevent common mistakes input arguments for main crypto operations
-    // must explicitly be wrapped in `Scalar`, `MontPoint` or `EdPoint`.
-    // Likewise results are often wrapped in these structs when needed.
-
-    // Let's illustrate it by instanciating a new scalar.
-    let mut b2: B416<DefaultAllocator> = Bytes::new_rand();
-    b2.clamp_41417();
-
-    // Transform `b2` to an explicit scalar value and multiply DH-style to
-    // `pkm`.
-    let sk2 = Scalar(b2);
-    let shared = sk2 * pkm;
-    println!("shared: {}", shared);
-
-    // To conclude, some protocols need to perform basic operations directly
-    // on scalar vakues modulo the base point's order. The `sc` module
-    // provides just that. Let's multiply `42` by `sk`.
-    let sc_sk: ScalarElem<DefaultAllocator> = ScalarElem::unpack(&sk).unwrap();
-    let sc_42: ScalarElem<DefaultAllocator> =
-        FromPrimitive::from_u64(1).unwrap();
-    let sc_sk42: ScalarElem<DefaultAllocator> = sc_sk * sc_42;
+    // Some protocols need to perform basic operations directly on scalar
+    // values modulo the base point's order. The `sc` module provides just
+    // that. Let's use it and multiply `42` by `sk`.
+    let sc_sk: ScalarElem<BufAlloc> = ScalarElem::unpack(&sk.read()).unwrap();
+    let sc_42: ScalarElem<BufAlloc> = FromPrimitive::from_u64(1).unwrap();
+    let sc_sk42: ScalarElem<BufAlloc> = sc_sk * sc_42;
 
     // We can also pack the result and multiply it to its base point to see if
-    // it matches `42 * pke`, it should. In this case the `GroupElem` is used
-    // to perform these operations as we don't want `42` to be clamped but
-    // taken as it is.
-    let sk42 = sc_sk42.pack();
+    // it matches `42 * pke`, as it should. In this case the `GroupElem` is
+    // used to perform these operations as we don't want `42` to be clamped but
+    // used as it is.
+    let sk42 = sc_sk42.pack::<BufAlloc>();
     let sh1 = GroupElem::base().scalar_mult(&sk42);
-    let sh2 = pke.scalar_mult(&sc_42.pack());
+    let sh2 = pke.scalar_mult(&sc_42.pack::<BufAlloc>());
     assert!(sh1 == sh2);
 }

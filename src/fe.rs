@@ -3,10 +3,10 @@ use serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 
-use common::utils;
-use common::sbuf::{Allocator, SBuf};
+use tars::allocator::Allocator;
+use tars::ProtBuf;
 
-use bytes::{B416, Bytes, Reducible};
+use common::{mod, BYTES_SIZE};
 
 
 const FE_SIZE: uint = 26;
@@ -20,7 +20,7 @@ const ONE: [i64, ..FE_SIZE] = [
 
 
 pub struct FieldElem<A> {
-    elem: SBuf<A, i64>
+    elem: ProtBuf<A, i64>
 }
 
 impl<A: Allocator> FieldElem<A> {
@@ -30,13 +30,13 @@ impl<A: Allocator> FieldElem<A> {
 
     pub fn zero() -> FieldElem<A> {
         FieldElem {
-            elem: SBuf::new_zero(FE_SIZE)
+            elem: ProtBuf::new_zero(FE_SIZE)
         }
     }
 
     pub fn one() -> FieldElem<A> {
         FieldElem {
-            elem: SBuf::from_slice(ONE[])
+            elem: ProtBuf::from_slice(ONE[])
         }
     }
 
@@ -52,19 +52,22 @@ impl<A: Allocator> FieldElem<A> {
         self.elem.get_mut(index)
     }
 
-    pub fn unpack(bytes: &B416<A>) -> FieldElem<A> {
-        let mut n: FieldElem<A> = FieldElem::new();
+    pub fn unpack(bytes: &[u8]) -> Option<FieldElem<A>> {
+        if bytes.len() != BYTES_SIZE {
+            return None;
+        }
 
-        for i in range(0u, 26) {
+        let mut n: FieldElem<A> = FieldElem::new();
+        for i in range(0u, FE_SIZE) {
             n[i] = bytes[2 * i] as i64 + (bytes[2 * i + 1] as i64 << 8);
         }
         n[25] &= 0x3fff; // mask top 2 bits
-        n
+        Some(n)
     }
 
-    pub fn pack(&self) -> B416<A> {
+    pub fn pack<B: Allocator>(&self) -> ProtBuf<B, u8> {
         let t = self.clone().reduce();
-        let mut r: B416<A> = Bytes::new_zero();
+        let mut r: ProtBuf<B, u8> = ProtBuf::new_zero(BYTES_SIZE);
 
         for i in range(0u, FE_SIZE) {
             r[2 * i] = (t[i] & 0xff) as u8;
@@ -78,7 +81,7 @@ impl<A: Allocator> FieldElem<A> {
     }
 
     pub fn cswap(&mut self, cond: i64, other: &mut FieldElem<A>) {
-        utils::bytes_cswap::<i64>(cond, self.elem[mut], other.elem[mut]);
+        common::bytes_cswap::<i64>(cond, self.elem[mut], other.elem[mut]);
     }
 
     pub fn carry(&self) -> FieldElem<A> {
@@ -117,26 +120,27 @@ impl<A: Allocator> FieldElem<A> {
 
     // Reduce n mod 2^416 - 68 and put limbs between [0, 2^16-1] through carry.
     // Requirement: 52 < n.len() <= 104
-    pub fn reduce_weak_from_bytes<T: Bytes + Reducible>(n: &T)
-                                                        -> FieldElem<A> {
-        let l = n.as_bytes().len() / 2;
-        assert!(l > 26 && l <= 52);
+    pub fn reduce_weak_from_bytes(n: &[u8]) -> Option<FieldElem<A>> {
+        if n.len() < BYTES_SIZE || n.len() > (BYTES_SIZE << 1) ||
+           n.len() % 2 == 1 {
+            return None;
+        }
 
         let mut r: FieldElem<A> = FieldElem::new();
 
-        for i in range(0u, 26) {
+        for i in range(0u, FE_SIZE) {
             r[i] = (*n)[2 * i] as i64 + ((*n)[2 * i + 1] as i64 << 8);
         }
-        for i in range(26u, l) {
+        for i in range(FE_SIZE, n.len() >> 1) {
             r[i - 26] += ((*n)[2 * i] as i64 +
                           ((*n)[2 * i + 1] as i64 << 8)) * 68;
         }
 
-        r.carry().carry()
+        Some(r.carry().carry())
     }
 
     pub fn parity_bit(&self) -> u8 {
-        let t = self.pack();
+        let t = self.pack::<A>();
         t[0] & 1
     }
 
@@ -260,13 +264,13 @@ impl<A: Allocator> Mul<FieldElem<A>, FieldElem<A>> for FieldElem<A> {
         let mut u: i64;
         let mut r: FieldElem<A> = FieldElem::new();
 
-        for i in range(0u, 26) {
+        for i in range(0u, FE_SIZE) {
             u = 0;
             for j in range(0u, i + 1) {
                 u += self[j] * other[i - j];
             }
-            for j in range(i + 1, 26) {
-                u += 68 * self[j] * other[i + 26 - j];
+            for j in range(i + 1, FE_SIZE) {
+                u += 68 * self[j] * other[i + FE_SIZE - j];
             }
             r[i] = u;
         }
@@ -283,19 +287,19 @@ impl<A: Allocator> Default for FieldElem<A> {
 
 impl<A: Allocator> Show for FieldElem<A> {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        self.pack().fmt(f)
+        self.pack::<A>().fmt(f)
     }
 }
 
 impl<A: Allocator> ToHex for FieldElem<A> {
     fn to_hex(&self) -> String {
-        self.pack().to_hex()
+        self.pack::<A>().to_hex()
     }
 }
 
 impl<A: Allocator> PartialEq for FieldElem<A> {
     fn eq(&self, other: &FieldElem<A>) -> bool {
-        self.pack() == other.pack()
+        self.pack::<A>() == other.pack::<A>()
     }
 }
 

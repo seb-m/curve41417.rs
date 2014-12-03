@@ -9,35 +9,26 @@ A pure-[Rust](http://www.rust-lang.org/) implementation of [Curve41417](http://s
 
 Install Rust package manager [Cargo](https://github.com/rust-lang/cargo).
 
-* Build as library:
-
-```
-$ cargo build
-```
-
-* Run tests, examples, benchmarks and build documentation:
-
-```
-$ cargo test  # Run tests and build examples under target/test/
-$ cargo bench
-$ cargo doc   # Build documentation under target/doc/
-```
-
 
 ## Example
 
 Consider this basic example performing a Diffie-Hellman in Curve41417 Montgomery's representation:
 
-```
+```rust
+extern crate tars;
 extern crate curve41417;
-use curve41417::bytes::{MontPoint, Scalar};
-use curve41417::mont;
 
-let (pk1, sk1): (MontPoint, Scalar) = mont::keypair();
-let (pk2, sk2) = mont::keypair();
+use tars::{BufAlloc, KeyAlloc, ProtBuf8, ProtKey8};
+use curve41417::mont::{gen_key, scalar_mult_base, scalar_mult};
 
-let shared1 = mont::scalar_mult(&sk1, &pk2);
-let shared2 = mont::scalar_mult(&sk2, &pk1);
+let sk1: ProtKey8<KeyAlloc> = gen_key();
+let pk1: ProtBuf8<BufAlloc> = scalar_mult_base(&sk1.read());
+
+let sk2: ProtKey8<KeyAlloc> = gen_key();
+let pk2: ProtBuf8<BufAlloc> = scalar_mult_base(&sk2.read());
+
+let shared1: ProtBuf8<BufAlloc> = scalar_mult(&sk1.read(), &pk2);
+let shared2: ProtBuf8<BufAlloc> = scalar_mult(&sk2.read(), &pk1);
 
 assert!(shared1 == shared2);
 ```
@@ -47,7 +38,7 @@ For a more detailed example see [curve41417_ops.rs](examples/curve41417_ops.rs).
 
 ## Documentation
 
-The generated documentation is also available [here](http://seb.dbzteam.org/curve41417.rs/curve41417/).
+The generated documentation is also available [here](http://seb.dbzteam.org/rs/curve41417/curve41417/).
 
 
 ## Notes

@@ -1,10 +1,13 @@
 [package]
 name = "curve41417"
 version = "0.0.1"
+description = "A pure-Rust Curve41417 implementation"
+license = "MIT/ASL2"
+readme = "README.md"
 authors = ["Sebastien Martini <seb@dbzteam.org>"]
 
 [lib]
 name = "curve41417"
 
-[dependencies.common]
-git = "https://github.com/seb-m/common.rs"
+[dependencies.tars]
+git = "https://github.com/seb-m/tars"

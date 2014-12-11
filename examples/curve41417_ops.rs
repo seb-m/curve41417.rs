@@ -12,9 +12,6 @@ fn main () {
     // goal here is just to show few examples on how to use this lib.
 
     // Let's instanciate a new key pair in Montgomery's representation.
-    // `*Alloc` represent memory allocators used to allocate memory
-    // buffers for keys and internal temporary buffers used in crypto
-    // operations.
     let sk = mont::gen_key();
     let pkm = mont::scalar_mult_base(&sk.read());
 

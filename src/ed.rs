@@ -3,7 +3,6 @@ use serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 
-use tars::allocator::{Allocator, KeyAllocator};
 use tars::{ProtBuf, ProtKey, ProtBuf8, ProtKey8};
 
 use common::{SCALAR_SIZE, Scalar};
@@ -116,21 +115,21 @@ const MONTB1: [u8, ..52] = [
 /// It handle various group elements operations such as scalar
 /// multiplications, point additions, Elligator point mapping,
 /// key pairs generation,...
-pub struct GroupElem<A> {
-  x: FieldElem<A>,
-  y: FieldElem<A>,
-  z: FieldElem<A>,
-  t: FieldElem<A>
+pub struct GroupElem {
+  x: FieldElem,
+  y: FieldElem,
+  z: FieldElem,
+  t: FieldElem
 }
 
-impl<A: Allocator> GroupElem<A> {
+impl GroupElem {
     /// Return a new group element with all its coordinates set to zero.
-    pub fn new() -> GroupElem<A> {
+    pub fn new() -> GroupElem {
         GroupElem::zero()
     }
 
     /// Return a group element with all its coordinates set to zero.
-    pub fn zero() -> GroupElem<A> {
+    pub fn zero() -> GroupElem {
         GroupElem {
             x: FieldElem::zero(),
             y: FieldElem::zero(),
@@ -140,7 +139,7 @@ impl<A: Allocator> GroupElem<A> {
     }
 
     /// Return the neutral point.
-    pub fn neutral() -> GroupElem<A> {
+    pub fn neutral() -> GroupElem {
          GroupElem {
             x: FieldElem::zero(),
             y: FieldElem::one(),
@@ -150,7 +149,7 @@ impl<A: Allocator> GroupElem<A> {
     }
 
     /// Return the base point `(x, 34)` of prime order `L`.
-    pub fn base() -> GroupElem<A> {
+    pub fn base() -> GroupElem {
         GroupElem {
             x: FieldElem::unpack(&BASEX).unwrap(),
             y: FieldElem::unpack(&BASEY).unwrap(),
@@ -159,28 +158,37 @@ impl<A: Allocator> GroupElem<A> {
          }
     }
 
-    fn b1() -> ProtBuf8<A> {
+    fn b1() -> ProtBuf8 {
         ProtBuf::from_slice(&B1)
     }
 
-    fn bminus1() -> ProtBuf8<A> {
+    fn bminus1() -> ProtBuf8 {
         ProtBuf::from_slice(&BMINUS1)
     }
 
-    fn edd() -> FieldElem<A> {
+    fn edd() -> FieldElem {
         FieldElem::unpack(&EDD).unwrap()
     }
 
-    fn monta() -> FieldElem<A> {
+    fn monta() -> FieldElem {
         FieldElem::unpack(&MONTA).unwrap()
     }
 
-    fn montb() -> FieldElem<A> {
+    fn montb() -> FieldElem {
         FieldElem::unpack(&MONTB).unwrap()
     }
 
-    fn montb1() -> FieldElem<A> {
+    fn montb1() -> FieldElem {
         FieldElem::unpack(&MONTB1).unwrap()
+    }
+
+
+    /// Generate a new secret key at random. It is clamped before being
+    /// returned.
+    pub fn gen_key() -> ProtKey8 {
+        let mut sk = ProtBuf::new_rand_os(SCALAR_SIZE);
+        sk.clamp_41417();
+        sk.into_key()
     }
 
     // Propagate changes made in `x` and `y` to `z` and `t`.
@@ -192,7 +200,7 @@ impl<A: Allocator> GroupElem<A> {
     /// Pack a group elem's coordinate `y` along with a sign bit taken from
     /// its `x` coordinate. This packed point may later be unpacked with
     /// `unpack()`.
-    pub fn pack<B: Allocator>(&self) -> ProtBuf8<B> {
+    pub fn pack(&self) -> ProtBuf8 {
         // Pack y
         let zi = self.z.inv();
         let tx = self.x * zi;
@@ -204,7 +212,7 @@ impl<A: Allocator> GroupElem<A> {
         r
     }
 
-    fn cswap(&mut self, cond: i64, other: &mut GroupElem<A>) {
+    fn cswap(&mut self, cond: i64, other: &mut GroupElem) {
         self.x.cswap(cond, &mut other.x);
         self.y.cswap(cond, &mut other.y);
         self.z.cswap(cond, &mut other.z);
@@ -213,7 +221,7 @@ impl<A: Allocator> GroupElem<A> {
 
     /// Return a point `q` such that `q=8.self` where `8` is curve's cofactor
     /// applied to this point's instance.
-    pub fn scalar_mult_cofactor(&self) -> GroupElem<A> {
+    pub fn scalar_mult_cofactor(&self) -> GroupElem {
         let mut q = *self + *self;
         q = q + q;
         q = q + q;
@@ -223,7 +231,7 @@ impl<A: Allocator> GroupElem<A> {
     /// Convert this point in Edwards coordinates to Montgomery's
     /// x-coordinate. This result may be used as input point in
     /// `curve41417::mont` scalar multiplications.
-    pub fn to_mont<B: Allocator>(&self) -> ProtBuf8<B> {
+    pub fn to_mont(&self) -> ProtBuf8 {
         let zi = self.z.inv();
         let ty = self.y * zi;
 
@@ -237,8 +245,7 @@ impl<A: Allocator> GroupElem<A> {
 
     /// Use [Elligator](http://elligator.cr.yp.to/) to encode a curve
     /// point to a byte-string representation.
-    pub fn elligator_to_representation<B: Allocator>(&self)
-                                                     -> Option<ProtBuf8<B>> {
+    pub fn elligator_to_representation(&self) -> Option<ProtBuf8> {
         // Use the following isomorphism:
         //  Eed: x^2 + y^2 = 1 + 3617 x^2 * y^2
         //  Ew:  v^2 = u^3 + A*u^2 + B*u
@@ -318,9 +325,9 @@ impl<A: Allocator> GroupElem<A> {
         Some(r2.pack())
     }
 
-    fn elligator_from_fe(n: &FieldElem<A>) -> Option<GroupElem<A>> {
+    fn elligator_from_fe(n: &FieldElem) -> Option<GroupElem> {
         // Check n not in {-1, 1} (A^2-4B is a non-square in Fq).
-        let r = n.pack::<A>();
+        let r = n.pack();
         if r == GroupElem::b1() || r == GroupElem::bminus1() {
             return None;
         };
@@ -360,7 +367,7 @@ impl<A: Allocator> GroupElem<A> {
         y.cswap(1 - is_e_minus_one, &mut t1);  // y
 
         // Convert to Edwards coordinates.
-        let mut p: GroupElem<A> = GroupElem::new();
+        let mut p: GroupElem = GroupElem::new();
         t1 = y.inv();
         p.x = x * t1;
 
@@ -375,12 +382,12 @@ impl<A: Allocator> GroupElem<A> {
     }
 }
 
-impl<A: Allocator, T: AsSlice<u8>> GroupElem<A> {
+impl<T: AsSlice<u8>> GroupElem {
     /// Unpack a Curve41417 point in Edwards representation from its
     /// `bytes` representation. `bytes` must hold a point packed obtained
     /// from a previous call to `pack()`.
-    pub fn unpack(bytes: &T) -> Option<GroupElem<A>> {
-        let mut r: GroupElem<A> = GroupElem::new();
+    pub fn unpack(bytes: &T) -> Option<GroupElem> {
+        let mut r: GroupElem = GroupElem::new();
 
         // Unpack y, top 2 bits are discarded in FieldElem::unpack().
         r.y = match FieldElem::unpack(bytes.as_slice()) {
@@ -423,7 +430,7 @@ impl<A: Allocator, T: AsSlice<u8>> GroupElem<A> {
     /// applied to the base point `BP`. Note that `n` is not clamped by this
     /// method before the multiplication is performed. Calling this method is
     /// equivalent to calling `GroupElem::base().scalar_mult(&n)`.
-    pub fn scalar_mult_base(n: &T) -> GroupElem<A> {
+    pub fn scalar_mult_base(n: &T) -> GroupElem {
         GroupElem::base().scalar_mult(n)
     }
 
@@ -431,8 +438,8 @@ impl<A: Allocator, T: AsSlice<u8>> GroupElem<A> {
     /// scalar values and `p1` and `p2` are group elements. Note that the
     /// values of `n1` and `n2` are not clamped by this method before their
     /// respective multiplications.
-    pub fn double_scalar_mult(n1: &T, p1: &GroupElem<A>,
-                              n2: &T, p2: &GroupElem<A>) -> GroupElem<A> {
+    pub fn double_scalar_mult(n1: &T, p1: &GroupElem,
+                              n2: &T, p2: &GroupElem) -> GroupElem {
         p1.scalar_mult(n1) + p2.scalar_mult(n2)
     }
 
@@ -448,9 +455,9 @@ impl<A: Allocator, T: AsSlice<u8>> GroupElem<A> {
     /// want the bits of the scalar to be modified before any scalar
     /// multiplication. Whereas a `ScalarElem` would automatically be reduced
     /// `mod L` (see `base()`) before any scalar multiplication takes place.
-    pub fn scalar_mult(&self, n: &T) -> GroupElem<A> {
+    pub fn scalar_mult(&self, n: &T) -> GroupElem {
         let mut p = self.clone();
-        let mut q: GroupElem<A> = GroupElem::neutral();
+        let mut q: GroupElem = GroupElem::neutral();
         let nb = n.as_slice();
 
         for i in range(0u, 415).rev() {
@@ -470,7 +477,7 @@ impl<A: Allocator, T: AsSlice<u8>> GroupElem<A> {
     /// the encoded representation returned by
     /// `elligator_to_representation()`. Otherwise use `elligator_from_bytes()`
     /// instead.
-    pub fn elligator_from_representation(r: &T) -> Option<GroupElem<A>> {
+    pub fn elligator_from_representation(r: &T) -> Option<GroupElem> {
         match FieldElem::unpack(r.as_slice()) {
             Some(ref fe) => GroupElem::elligator_from_fe(fe),
             None => None
@@ -487,7 +494,7 @@ impl<A: Allocator, T: AsSlice<u8>> GroupElem<A> {
     /// `r = s mod q`, as `r` and `-r` map to the same point, it may lead
     /// to obtain a non unique result for
     /// `elligator_to_representation(elligator_from_bytes(s))` in `{r, -r}`.
-    pub fn elligator_from_bytes(s: &T) -> Option<GroupElem<A>> {
+    pub fn elligator_from_bytes(s: &T) -> Option<GroupElem> {
         if s.as_slice().len() < 64 {
             return None;
         }
@@ -499,19 +506,9 @@ impl<A: Allocator, T: AsSlice<u8>> GroupElem<A> {
     }
 }
 
-impl<K: KeyAllocator> GroupElem<K> {
-    /// Generate a new secret key at random. It is clamped before being
-    /// returned.
-    pub fn gen_key() -> ProtKey8<K> {
-        let mut sk: ProtBuf8<K> = ProtBuf::new_rand_os(SCALAR_SIZE);
-        sk.clamp_41417();
-        ProtKey::new(sk)
-    }
-}
-
-impl<A: Allocator> Add<GroupElem<A>, GroupElem<A>> for GroupElem<A> {
+impl Add<GroupElem, GroupElem> for GroupElem {
     /// Add points.
-    fn add(&self, other: &GroupElem<A>) -> GroupElem<A> {
+    fn add(&self, other: &GroupElem) -> GroupElem {
         // 2008/522.pdf section 3.1 (a=1)
         let a = self.x * other.x;
         let b = self.y * other.y;
@@ -535,16 +532,16 @@ impl<A: Allocator> Add<GroupElem<A>, GroupElem<A>> for GroupElem<A> {
     }
 }
 
-impl<A: Allocator> Sub<GroupElem<A>, GroupElem<A>> for GroupElem<A> {
+impl Sub<GroupElem, GroupElem> for GroupElem {
     /// Subtract points.
-    fn sub(&self, other: &GroupElem<A>) -> GroupElem<A> {
+    fn sub(&self, other: &GroupElem) -> GroupElem {
         *self + (-(*other))
     }
 }
 
-impl<A: Allocator> Neg<GroupElem<A>> for GroupElem<A> {
+impl Neg<GroupElem> for GroupElem {
     /// Negate point.
-    fn neg(&self) -> GroupElem<A> {
+    fn neg(&self) -> GroupElem {
         let mut r = self.clone();
         r.x = -r.x;
         r.t = -r.t;
@@ -552,32 +549,31 @@ impl<A: Allocator> Neg<GroupElem<A>> for GroupElem<A> {
     }
 }
 
-impl<A: Allocator, T: AsSlice<u8>> Mul<T, GroupElem<A>> for GroupElem<A> {
+impl<T: AsSlice<u8>> Mul<T, GroupElem> for GroupElem {
     /// Multiply point `self` with scalar value `other`.
-    fn mul(&self, other: &T) -> GroupElem<A> {
+    fn mul(&self, other: &T) -> GroupElem {
         self.scalar_mult(other)
     }
 }
 
-impl<A: Allocator> Mul<GroupElem<A>, ProtBuf8<A>> for ProtBuf8<A> {
+impl Mul<GroupElem, ProtBuf8> for ProtBuf8 {
     /// Multiply scalar `self` with point `other` and return a packed point.
     /// Note: the same allocator is used for both operands and for the
     /// packed result.
-    fn mul(&self, other: &GroupElem<A>) -> ProtBuf8<A> {
+    fn mul(&self, other: &GroupElem) -> ProtBuf8 {
         other.scalar_mult(self).pack()
     }
 }
 
-impl<A: Allocator,
-     K: KeyAllocator> Mul<GroupElem<A>, ProtKey8<K>> for ProtKey8<K> {
+impl Mul<GroupElem, ProtKey8> for ProtKey8 {
     /// Multiply scalar `self` with point `other` and return a packed point.
-    fn mul(&self, other: &GroupElem<A>) -> ProtKey8<K> {
-        ProtKey::new(other.scalar_mult(&self.read()).pack())
+    fn mul(&self, other: &GroupElem) -> ProtKey8 {
+        ProtKey::from_buf(other.scalar_mult(&self.read()).pack())
     }
 }
 
-impl<A: Allocator> Clone for GroupElem<A> {
-    fn clone(&self) -> GroupElem<A> {
+impl Clone for GroupElem {
+    fn clone(&self) -> GroupElem {
         GroupElem {
             x: self.x.clone(),
             y: self.y.clone(),
@@ -587,34 +583,34 @@ impl<A: Allocator> Clone for GroupElem<A> {
     }
 }
 
-impl<A: Allocator> Default for GroupElem<A> {
+impl Default for GroupElem {
     /// By default return the neutral point.
-    fn default() -> GroupElem<A> {
+    fn default() -> GroupElem {
         GroupElem::neutral()
     }
 }
 
-impl<A: Allocator> Show for GroupElem<A> {
+impl Show for GroupElem {
     /// Format as hex-string.
     fn fmt(&self, f: &mut Formatter) -> Result {
-        self.pack::<A>().fmt(f)
+        self.pack().fmt(f)
     }
 }
 
-impl<A: Allocator> ToHex for GroupElem<A> {
+impl ToHex for GroupElem {
     fn to_hex(&self) -> String {
-        self.pack::<A>().to_hex()
+        self.pack().to_hex()
     }
 }
 
-impl<A: Allocator> PartialEq for GroupElem<A> {
+impl PartialEq for GroupElem {
     /// Constant-time points equality comparison.
-    fn eq(&self, other: &GroupElem<A>) -> bool {
-        self.pack::<A>() == other.pack::<A>()
+    fn eq(&self, other: &GroupElem) -> bool {
+        self.pack() == other.pack()
     }
 }
 
-impl<A: Allocator> Eq for GroupElem<A> {
+impl Eq for GroupElem {
 }
 
 
@@ -622,7 +618,7 @@ impl<A: Allocator> Eq for GroupElem<A> {
 mod tests {
     use test::Bencher;
 
-    use tars::{BufAlloc, KeyAlloc, ProtBuf, ProtKey, ProtBuf8, ProtKey8};
+    use tars::{ProtBuf, ProtKey, ProtBuf8};
 
     use common::{SCALAR_SIZE, Scalar};
     use ed::GroupElem;
@@ -631,16 +627,16 @@ mod tests {
 
     #[test]
     fn test_dh_rand() {
-        let sk1: ProtKey8<KeyAlloc> = GroupElem::gen_key();
-        let pk1: GroupElem<BufAlloc> = GroupElem::scalar_mult_base(&sk1.read());
-        let sk2: ProtKey8<KeyAlloc> = GroupElem::gen_key();
-        let pk2: GroupElem<BufAlloc> = GroupElem::scalar_mult_base(&sk2.read());
+        let sk1 = GroupElem::gen_key();
+        let pk1 = GroupElem::scalar_mult_base(&sk1.read());
+        let sk2 = GroupElem::gen_key();
+        let pk2 = GroupElem::scalar_mult_base(&sk2.read());
 
         let ssk1 = pk2 * sk1.read();
         let ssk2 = sk2 * pk1;
         let ssk3 = pk1 * sk2.read();
 
-        assert!(ssk1.pack::<KeyAlloc>() == *ssk2.read());
+        assert!(ProtKey::from_buf(ssk1.pack()) == ssk2);
         assert!(ssk1 == ssk3);
     }
 
@@ -664,9 +660,9 @@ mod tests {
             0x16, 0x49, 0xe8, 0xca, 0x32, 0x72, 0x1d, 0xba,
             0x47, 0x29, 0xa5, 0x09];
 
-        let mut scn: ProtBuf8<KeyAlloc> = ProtBuf::from_slice(&n);
-        let scr: ProtBuf8<KeyAlloc> = ProtBuf::from_slice(&r);
-        let bp = GroupElem::<BufAlloc>::base();
+        let mut scn: ProtBuf8 = ProtBuf::from_slice(&n);
+        let scr = ProtBuf::from_slice(&r);
+        let bp = GroupElem::base();
 
         scn.clamp_41417();
         let q = bp * scn;
@@ -676,12 +672,12 @@ mod tests {
 
     #[test]
     fn test_ops() {
-        let mut b = GroupElem::<BufAlloc>::base();
+        let mut b = GroupElem::base();
         for _ in range(0u, 10) {
-            b = b + GroupElem::<BufAlloc>::base();
+            b = b + GroupElem::base();
         }
 
-        let nb = GroupElem::<BufAlloc>::base();
+        let nb = GroupElem::base();
         for _ in range(0u, 10) {
             b = b - nb;
         }
@@ -691,12 +687,12 @@ mod tests {
 
     #[test]
     fn test_scalar_cofactor() {
-        let n: ProtBuf8<KeyAlloc> = ProtBuf::new_rand_os(SCALAR_SIZE);
-        let mut cofactor: ProtBuf8<BufAlloc> = ProtBuf::new_zero(SCALAR_SIZE);
+        let n: ProtBuf8 = ProtBuf::new_rand_os(SCALAR_SIZE);
+        let mut cofactor: ProtBuf8 = ProtBuf::new_zero(SCALAR_SIZE);
         cofactor[0] = 0x8;
 
-        let bp = GroupElem::<BufAlloc>::base();
-        let q = bp * ProtKey::new(n).read();
+        let bp = GroupElem::base();
+        let q = bp * n;
         let r = q.scalar_mult_cofactor();
 
         let mut s = q.clone();
@@ -711,19 +707,19 @@ mod tests {
 
     #[test]
     fn test_pack() {
-        let bp = GroupElem::<BufAlloc>::base();
-        let n: ProtBuf8<KeyAlloc> = ProtBuf::new_rand_os(SCALAR_SIZE);
+        let bp = GroupElem::base();
+        let n: ProtBuf8 = ProtBuf::new_rand_os(SCALAR_SIZE);
 
-        let q = bp * ProtKey::new(n).read();
-        let qs = q.pack::<BufAlloc>();
+        let q = bp * n;
+        let qs = q.pack();
 
         let zi = q.z.inv();
         let tx = q.x * zi;
         let ty = q.y * zi;
-        let xs = tx.pack::<BufAlloc>();
-        let ys = ty.pack::<BufAlloc>();
+        let xs = tx.pack();
+        let ys = ty.pack();
 
-        let uq: GroupElem<BufAlloc> = GroupElem::unpack(&qs).unwrap();
+        let uq = GroupElem::unpack(&qs).unwrap();
 
         let uys = uq.y.pack();
         assert!(ys == uys);
@@ -734,11 +730,11 @@ mod tests {
 
     #[test]
     fn test_ed_to_mont() {
-        let bp = GroupElem::<BufAlloc>::base();
-        let mut b1: ProtBuf8<KeyAlloc> = ProtBuf::new_rand_os(SCALAR_SIZE);
+        let bp = GroupElem::base();
+        let mut b1: ProtBuf8 = ProtBuf::new_rand_os(SCALAR_SIZE);
         b1.clamp_41417();
 
-        let m1: ProtBuf8<BufAlloc> = mont::scalar_mult_base(&b1);
+        let m1 = mont::scalar_mult_base(&b1);
         let e1 = bp * b1;
         let m11 = e1.to_mont();
 
@@ -774,12 +770,11 @@ mod tests {
             0x7e, 0xd9, 0xec, 0xbb, 0xe7, 0xff, 0x1b, 0xae,
             0xd0, 0x11, 0xd4, 0x1c];
 
-        let p: GroupElem<BufAlloc> =
-            GroupElem::elligator_from_representation(&n.as_slice()).unwrap();
-        assert!(x[] == p.x.pack::<BufAlloc>()[]);
-        assert!(y[] == p.y.pack::<BufAlloc>()[]);
+        let p = GroupElem::elligator_from_representation(&n.as_slice()).unwrap();
+        assert!(x[] == p.x.pack()[]);
+        assert!(y[] == p.y.pack()[]);
 
-        let n2: ProtBuf8<BufAlloc> = p.elligator_to_representation().unwrap();
+        let n2 = p.elligator_to_representation().unwrap();
         assert!(n[] == n2[]);
     }
 
@@ -831,31 +826,29 @@ mod tests {
             0x57, 0x83, 0xcb, 0x02, 0xfc, 0x4c, 0x4a, 0x49,
             0xe8, 0x83, 0xe9, 0x22];
 
-        let p: GroupElem<BufAlloc> =
-            GroupElem::elligator_from_bytes(&n.as_slice()).unwrap();
-        assert!(x[] == p.x.pack::<BufAlloc>()[]);
-        assert!(y[] == p.y.pack::<BufAlloc>()[]);
+        let p = GroupElem::elligator_from_bytes(&n.as_slice()).unwrap();
+        assert!(x[] == p.x.pack()[]);
+        assert!(y[] == p.y.pack()[]);
 
-        let r: ProtBuf8<BufAlloc> = p.elligator_to_representation().unwrap();
+        let r = p.elligator_to_representation().unwrap();
         assert!(r[] == r1[] || r[] == r2[]);
     }
 
     #[test]
     fn test_elligator_s2p() {
-        let b: ProtBuf8<BufAlloc> = ProtBuf::new_rand_os(64);
-        let p1: GroupElem<BufAlloc> =
-            GroupElem::elligator_from_bytes(&b).unwrap();
-        let r: ProtBuf8<BufAlloc> = p1.elligator_to_representation().unwrap();
+        let b: ProtBuf8 = ProtBuf::new_rand_os(64);
+        let p1 = GroupElem::elligator_from_bytes(&b).unwrap();
+        let r = p1.elligator_to_representation().unwrap();
         let p2 = GroupElem::elligator_from_representation(&r).unwrap();
         assert!(p1 == p2);
     }
 
     #[test]
     fn test_elligator_p2s() {
-        let mut p1: GroupElem<BufAlloc>;
-        let mut e: ProtBuf8<BufAlloc>;
+        let mut p1: GroupElem;
+        let mut e: ProtBuf8;
         loop {
-            let sk = GroupElem::<KeyAlloc>::gen_key();
+            let sk = GroupElem::gen_key();
             let pk = GroupElem::scalar_mult_base(&sk.read());
             let r = pk.elligator_to_representation();
             if r.is_some() {
@@ -870,8 +863,8 @@ mod tests {
 
     #[bench]
     fn bench_scalar_mult_base(b: &mut Bencher) {
-        let bp = GroupElem::<BufAlloc>::base();
-        let sk = GroupElem::<KeyAlloc>::gen_key();
+        let bp = GroupElem::base();
+        let sk = GroupElem::gen_key();
         b.iter(|| {
             bp.scalar_mult(&sk.read());
         })
@@ -879,9 +872,9 @@ mod tests {
 
     #[bench]
     fn bench_scalar_mult(b: &mut Bencher) {
-        let sk = GroupElem::<KeyAlloc>::gen_key();
-        let pk: GroupElem<BufAlloc> = GroupElem::scalar_mult_base(&sk.read());
-        let n: ProtBuf8<KeyAlloc> = ProtBuf::new_rand_os(SCALAR_SIZE);
+        let sk = GroupElem::gen_key();
+        let pk = GroupElem::scalar_mult_base(&sk.read());
+        let n: ProtBuf8 = ProtBuf::new_rand_os(SCALAR_SIZE);
         b.iter(|| {
             pk.scalar_mult(&n);
         })

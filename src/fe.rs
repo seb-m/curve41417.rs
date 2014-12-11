@@ -3,8 +3,7 @@ use serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 
-use tars::allocator::Allocator;
-use tars::ProtBuf;
+use tars::{ProtBuf, ProtBuf8};
 
 use common::{mod, BYTES_SIZE};
 
@@ -19,22 +18,22 @@ const ONE: [i64, ..FE_SIZE] = [
 ];
 
 
-pub struct FieldElem<A> {
-    elem: ProtBuf<A, i64>
+pub struct FieldElem {
+    elem: ProtBuf<i64>
 }
 
-impl<A: Allocator> FieldElem<A> {
-    pub fn new() -> FieldElem<A> {
+impl FieldElem {
+    pub fn new() -> FieldElem {
         FieldElem::zero()
     }
 
-    pub fn zero() -> FieldElem<A> {
+    pub fn zero() -> FieldElem {
         FieldElem {
             elem: ProtBuf::new_zero(FE_SIZE)
         }
     }
 
-    pub fn one() -> FieldElem<A> {
+    pub fn one() -> FieldElem {
         FieldElem {
             elem: ProtBuf::from_slice(ONE[])
         }
@@ -52,12 +51,12 @@ impl<A: Allocator> FieldElem<A> {
         self.elem.get_mut(index)
     }
 
-    pub fn unpack(bytes: &[u8]) -> Option<FieldElem<A>> {
+    pub fn unpack(bytes: &[u8]) -> Option<FieldElem> {
         if bytes.len() != BYTES_SIZE {
             return None;
         }
 
-        let mut n: FieldElem<A> = FieldElem::new();
+        let mut n = FieldElem::new();
         for i in range(0u, FE_SIZE) {
             n[i] = bytes[2 * i] as i64 + (bytes[2 * i + 1] as i64 << 8);
         }
@@ -65,9 +64,9 @@ impl<A: Allocator> FieldElem<A> {
         Some(n)
     }
 
-    pub fn pack<B: Allocator>(&self) -> ProtBuf<B, u8> {
+    pub fn pack(&self) -> ProtBuf8 {
         let t = self.clone().reduce();
-        let mut r: ProtBuf<B, u8> = ProtBuf::new_zero(BYTES_SIZE);
+        let mut r = ProtBuf::new_zero(BYTES_SIZE);
 
         for i in range(0u, FE_SIZE) {
             r[2 * i] = (t[i] & 0xff) as u8;
@@ -80,11 +79,11 @@ impl<A: Allocator> FieldElem<A> {
         self.elem.len()
     }
 
-    pub fn cswap(&mut self, cond: i64, other: &mut FieldElem<A>) {
+    pub fn cswap(&mut self, cond: i64, other: &mut FieldElem) {
         common::bytes_cswap::<i64>(cond, self.elem[mut], other.elem[mut]);
     }
 
-    pub fn carry(&self) -> FieldElem<A> {
+    pub fn carry(&self) -> FieldElem {
         let mut r = self.clone();
         let mut c: i64;
 
@@ -99,9 +98,9 @@ impl<A: Allocator> FieldElem<A> {
     }
 
     // Fully reduce n mod 2^414 - 17
-    pub fn reduce(&self) -> FieldElem<A> {
+    pub fn reduce(&self) -> FieldElem {
         let mut r = self.clone().carry().carry().carry();
-        let mut m: FieldElem<A> = FieldElem::new();
+        let mut m = FieldElem::new();
 
         for _ in range(0u, 3) {
             m[0] = r[0] - 0xffef;
@@ -120,13 +119,13 @@ impl<A: Allocator> FieldElem<A> {
 
     // Reduce n mod 2^416 - 68 and put limbs between [0, 2^16-1] through carry.
     // Requirement: 52 < n.len() <= 104
-    pub fn reduce_weak_from_bytes(n: &[u8]) -> Option<FieldElem<A>> {
+    pub fn reduce_weak_from_bytes(n: &[u8]) -> Option<FieldElem> {
         if n.len() < BYTES_SIZE || n.len() > (BYTES_SIZE << 1) ||
            n.len() % 2 == 1 {
             return None;
         }
 
-        let mut r: FieldElem<A> = FieldElem::new();
+        let mut r = FieldElem::new();
 
         for i in range(0u, FE_SIZE) {
             r[i] = (*n)[2 * i] as i64 + ((*n)[2 * i + 1] as i64 << 8);
@@ -140,12 +139,12 @@ impl<A: Allocator> FieldElem<A> {
     }
 
     pub fn parity_bit(&self) -> u8 {
-        let t = self.pack::<A>();
+        let t = self.pack();
         t[0] & 1
     }
 
     #[allow(dead_code)]
-    pub fn muli(&self, other: i16) -> FieldElem<A> {
+    pub fn muli(&self, other: i16) -> FieldElem {
         let mut r = self.clone();
 
         for i in range(0u, r.len()) {
@@ -155,11 +154,11 @@ impl<A: Allocator> FieldElem<A> {
         r.carry().carry()
     }
 
-    pub fn square(&self) -> FieldElem<A> {
+    pub fn square(&self) -> FieldElem {
         self.mul(self)
     }
 
-    pub fn inv(&self) -> FieldElem<A> {
+    pub fn inv(&self) -> FieldElem {
         let mut r = self.clone();
 
         for i in range(0u, 413).rev() {
@@ -173,7 +172,7 @@ impl<A: Allocator> FieldElem<A> {
 
     // Legendre symbol.
     // i ** ((P - 1) / 2) = i ** (2 ** 413 - 9)
-    pub fn pow4139(&self) -> FieldElem<A> {
+    pub fn pow4139(&self) -> FieldElem {
         let mut r = self.clone();
 
         for i in range(0u, 412).rev() {
@@ -186,7 +185,7 @@ impl<A: Allocator> FieldElem<A> {
     }
 
     // i ** ((P - 3) / 4) = i ** (2 ** 412 - 5)
-    pub fn pow4125(&self) -> FieldElem<A> {
+    pub fn pow4125(&self) -> FieldElem {
         let mut r = self.clone();
 
         for i in range(0u, 411).rev() {
@@ -200,7 +199,7 @@ impl<A: Allocator> FieldElem<A> {
 
     // Principal square root for p = 3 mod 4.
     // i ** ((P + 1) / 4) = i ** (2 ** 412 - 4)
-    pub fn pow4124(&self) -> FieldElem<A> {
+    pub fn pow4124(&self) -> FieldElem {
         let mut r = self.clone();
 
         for i in range(0u, 411).rev() {
@@ -213,28 +212,28 @@ impl<A: Allocator> FieldElem<A> {
     }
 }
 
-impl<A: Allocator> Clone for FieldElem<A> {
-    fn clone(&self) -> FieldElem<A> {
+impl Clone for FieldElem {
+    fn clone(&self) -> FieldElem {
         FieldElem {
             elem: self.elem.clone()
         }
     }
 }
 
-impl<A: Allocator> Index<uint, i64> for FieldElem<A> {
+impl Index<uint, i64> for FieldElem {
     fn index(&self, index: &uint) -> &i64 {
         self.get(*index)
     }
 }
 
-impl<A: Allocator> IndexMut<uint, i64> for FieldElem<A> {
+impl IndexMut<uint, i64> for FieldElem {
     fn index_mut(&mut self, index: &uint) -> &mut i64 {
         self.get_mut(*index)
     }
 }
 
-impl<A: Allocator> Add<FieldElem<A>, FieldElem<A>> for FieldElem<A> {
-    fn add(&self, other: &FieldElem<A>) -> FieldElem<A> {
+impl Add<FieldElem, FieldElem> for FieldElem {
+    fn add(&self, other: &FieldElem) -> FieldElem {
         let mut r = self.clone();
         for i in range(0u, r.len()) {
             r[i] += other[i];
@@ -243,8 +242,8 @@ impl<A: Allocator> Add<FieldElem<A>, FieldElem<A>> for FieldElem<A> {
     }
 }
 
-impl<A: Allocator> Sub<FieldElem<A>, FieldElem<A>> for FieldElem<A> {
-    fn sub(&self, other: &FieldElem<A>) -> FieldElem<A> {
+impl Sub<FieldElem, FieldElem> for FieldElem {
+    fn sub(&self, other: &FieldElem) -> FieldElem {
         let mut r = self.clone();
         for i in range(0u, r.len()) {
             r[i] -= other[i];
@@ -253,16 +252,16 @@ impl<A: Allocator> Sub<FieldElem<A>, FieldElem<A>> for FieldElem<A> {
     }
 }
 
-impl<A: Allocator> Neg<FieldElem<A>> for FieldElem<A> {
-    fn neg(&self) -> FieldElem<A> {
+impl Neg<FieldElem> for FieldElem {
+    fn neg(&self) -> FieldElem {
         FieldElem::zero() - *self
     }
 }
 
-impl<A: Allocator> Mul<FieldElem<A>, FieldElem<A>> for FieldElem<A> {
-    fn mul(&self, other: &FieldElem<A>) -> FieldElem<A> {
+impl Mul<FieldElem, FieldElem> for FieldElem {
+    fn mul(&self, other: &FieldElem) -> FieldElem {
         let mut u: i64;
-        let mut r: FieldElem<A> = FieldElem::new();
+        let mut r = FieldElem::new();
 
         for i in range(0u, FE_SIZE) {
             u = 0;
@@ -279,29 +278,29 @@ impl<A: Allocator> Mul<FieldElem<A>, FieldElem<A>> for FieldElem<A> {
     }
 }
 
-impl<A: Allocator> Default for FieldElem<A> {
-    fn default() -> FieldElem<A> {
+impl Default for FieldElem {
+    fn default() -> FieldElem {
         FieldElem::new()
     }
 }
 
-impl<A: Allocator> Show for FieldElem<A> {
+impl Show for FieldElem {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        self.pack::<A>().fmt(f)
+        self.pack().fmt(f)
     }
 }
 
-impl<A: Allocator> ToHex for FieldElem<A> {
+impl ToHex for FieldElem {
     fn to_hex(&self) -> String {
-        self.pack::<A>().to_hex()
+        self.pack().to_hex()
     }
 }
 
-impl<A: Allocator> PartialEq for FieldElem<A> {
-    fn eq(&self, other: &FieldElem<A>) -> bool {
-        self.pack::<A>() == other.pack::<A>()
+impl PartialEq for FieldElem {
+    fn eq(&self, other: &FieldElem) -> bool {
+        self.pack() == other.pack()
     }
 }
 
-impl<A: Allocator> Eq for FieldElem<A> {
+impl Eq for FieldElem {
 }

@@ -11,6 +11,7 @@
        html_root_url = "http://doc.rust-lang.org/")]
 
 #![feature(macro_rules)]
+#![feature(default_type_params)]
 #![feature(slicing_syntax)]
 #![feature(phase)]
 

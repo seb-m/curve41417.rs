@@ -4,7 +4,6 @@ use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 use std::rand::{Rand, Rng};
 
-use tars::allocator::Allocator;
 use tars::{ProtBuf, ProtBuf8};
 
 use common::{mod, BYTES_SIZE};
@@ -38,25 +37,25 @@ const LD: [u8, ..27] = [
 ///
 /// Provide commons Curve41417 scalar operations computed `mod L`, where
 /// `L` is the prime order of the base point `ed::base()` currently used.
-pub struct ScalarElem<A> {
-    elem: ProtBuf<A, i64>
+pub struct ScalarElem {
+    elem: ProtBuf<i64>
 }
 
-impl<A: Allocator> ScalarElem<A> {
+impl ScalarElem {
     // Return a new scalar element with its value set to `0`.
-    fn new_zero() -> ScalarElem<A> {
+    fn new_zero() -> ScalarElem {
         ScalarElem::zero()
     }
 
     /// Generate a new random `ScalarElem` between `[0, L-1]`.
     /// Use `OsRng` (which uses `/dev/[u]random` on Unix) as PRNG.
-    pub fn new_rand() -> ScalarElem<A> {
+    pub fn new_rand() -> ScalarElem {
         let rng = &mut common::os_rng();
         Rand::rand(rng)
     }
 
     /// Return scalar value representing zero.
-    pub fn zero() -> ScalarElem<A> {
+    pub fn zero() -> ScalarElem {
         ScalarElem {
             elem: ProtBuf::new_zero(SCE_SIZE)
         }
@@ -83,7 +82,7 @@ impl<A: Allocator> ScalarElem<A> {
     // Conditionally swap this scalar element with `other`. `cond` serves
     // as condition and must be `0` or `1` strictly. Values are swapped iff
     // `cond == 1`.
-    fn cswap(&mut self, cond: i64, other: &mut ScalarElem<A>) {
+    fn cswap(&mut self, cond: i64, other: &mut ScalarElem) {
         common::bytes_cswap::<i64>(cond, self.elem[mut], other.elem[mut]);
     }
 
@@ -114,7 +113,7 @@ impl<A: Allocator> ScalarElem<A> {
         assert!(n.len() > 52);
         assert!(n.len() <= 104);
 
-        let mut t: ProtBuf<A, i64> = ProtBuf::new_zero(78);
+        let mut t: ProtBuf<i64> = ProtBuf::new_zero(78);
         for i in range(0u, 52) {
             t[i] = n[i];
         }
@@ -152,7 +151,7 @@ impl<A: Allocator> ScalarElem<A> {
         }
 
         // Substract L a last time in case n is in [L, 2^411-1]
-        let mut m: ScalarElem<A> = ScalarElem::new_zero();
+        let mut m = ScalarElem::new_zero();
         carry = 0;
         for i in range(0u, 52) {
             m[i] = self[i] + carry - (L[i] as i64);
@@ -162,9 +161,9 @@ impl<A: Allocator> ScalarElem<A> {
         self.cswap(1 - (carry & 1), &mut m);
     }
 
-    fn unpack_wo_reduce(n: &[u8]) -> ScalarElem<A> {
+    fn unpack_wo_reduce(n: &[u8]) -> ScalarElem {
         // Note: would be great to also check/assert that n is in [0, L - 1].
-        let mut r: ScalarElem<A> = ScalarElem::new_zero();
+        let mut r = ScalarElem::new_zero();
 
         for i in range(0u, 52) {
             r[i] = n[i] as i64;
@@ -172,14 +171,14 @@ impl<A: Allocator> ScalarElem<A> {
         r
     }
 
-    fn unpack_w_reduce(n: &[u8]) -> ScalarElem<A> {
-        let mut t: ProtBuf<A, i64> = ProtBuf::new_zero(n.len());
+    fn unpack_w_reduce(n: &[u8]) -> ScalarElem {
+        let mut t: ProtBuf<i64> = ProtBuf::new_zero(n.len());
 
         for i in range(0u, n.len()) {
             t[i] = n[i] as i64;
         }
 
-        let mut r: ScalarElem<A> = ScalarElem::new_zero();
+        let mut r = ScalarElem::new_zero();
         r.reduce_weak(t[]);
         r
     }
@@ -187,11 +186,11 @@ impl<A: Allocator> ScalarElem<A> {
     /// Pack the current scalar value reduced `mod L`. Note: it is not
     /// until this method is called that the scalar element is reduced to
     /// its canonical form.
-    pub fn pack<B: Allocator>(&self) -> ProtBuf8<B> {
+    pub fn pack(&self) -> ProtBuf8 {
         let mut t = self.clone();
         t.reduce();
 
-        let mut b: ProtBuf8<B> = ProtBuf::new_zero(BYTES_SIZE);
+        let mut b = ProtBuf::new_zero(BYTES_SIZE);
         for i in range(0u, BYTES_SIZE) {
             b[i] = (t[i] & 0xff) as u8;
         }
@@ -204,10 +203,10 @@ impl<A: Allocator> ScalarElem<A> {
     }
 }
 
-impl<A: Allocator, T: AsSlice<u8>> ScalarElem<A> {
+impl<T: AsSlice<u8>> ScalarElem {
     /// Unpack scalar value `n`. It must represent a value strictly in
     /// `[0, L-1]` and it should not be expected to be reduced on unpacking.
-    pub fn unpack(n: &T) -> Option<ScalarElem<A>> {
+    pub fn unpack(n: &T) -> Option<ScalarElem> {
         let nb = n.as_slice();
         match nb.len() {
             BYTES_SIZE => Some(ScalarElem::unpack_wo_reduce(nb)),
@@ -219,7 +218,7 @@ impl<A: Allocator, T: AsSlice<u8>> ScalarElem<A> {
     /// to be of a large enough size in order to provide a good uniformity
     /// of distribution on reductions `mod L`. Thus `b` must be between
     /// `[64, 104]` bytes.
-    pub fn unpack_from_bytes(b: &T) -> Option<ScalarElem<A>> {
+    pub fn unpack_from_bytes(b: &T) -> Option<ScalarElem> {
         let nb = b.as_slice();
         match nb.len() {
             64...104 => Some(ScalarElem::unpack_w_reduce(nb)),
@@ -230,34 +229,34 @@ impl<A: Allocator, T: AsSlice<u8>> ScalarElem<A> {
     /// Unpack bytes `b` as a scalar, reduce it `mod L` and return the
     /// packed reduced result. See `unpack_from_bytes()` for more details
     /// on performed unpacking.
-    pub fn reduce_from_bytes<B: Allocator>(b: &T) -> ProtBuf8<B> {
-        ScalarElem::<A, T>::unpack_from_bytes(b).unwrap().pack::<B>()
+    pub fn reduce_from_bytes(b: &T) -> ProtBuf8 {
+        ScalarElem::unpack_from_bytes(b).unwrap().pack()
     }
 }
 
-impl<A: Allocator> Clone for ScalarElem<A> {
-    fn clone(&self) -> ScalarElem<A> {
+impl Clone for ScalarElem {
+    fn clone(&self) -> ScalarElem {
         ScalarElem {
             elem: self.elem.clone()
         }
     }
 }
 
-impl<A: Allocator> Index<uint, i64> for ScalarElem<A> {
+impl Index<uint, i64> for ScalarElem {
     fn index(&self, index: &uint) -> &i64 {
         self.get(*index)
     }
 }
 
-impl<A: Allocator> IndexMut<uint, i64> for ScalarElem<A> {
+impl IndexMut<uint, i64> for ScalarElem {
     fn index_mut(&mut self, index: &uint) -> &mut i64 {
         self.get_mut(*index)
     }
 }
 
-impl<A: Allocator> Add<ScalarElem<A>, ScalarElem<A>> for ScalarElem<A> {
+impl Add<ScalarElem, ScalarElem> for ScalarElem {
     /// Add scalars.
-    fn add(&self, other: &ScalarElem<A>) -> ScalarElem<A> {
+    fn add(&self, other: &ScalarElem) -> ScalarElem {
         let mut r = self.clone();
         for i in range(0u, self.len()) {
             r[i] += other[i];
@@ -266,9 +265,9 @@ impl<A: Allocator> Add<ScalarElem<A>, ScalarElem<A>> for ScalarElem<A> {
     }
 }
 
-impl<A: Allocator> Sub<ScalarElem<A>, ScalarElem<A>> for ScalarElem<A> {
+impl Sub<ScalarElem, ScalarElem> for ScalarElem {
     /// Substract scalars.
-    fn sub(&self, other: &ScalarElem<A>) -> ScalarElem<A> {
+    fn sub(&self, other: &ScalarElem) -> ScalarElem {
         let mut r = self.clone();
         for i in range(0u, self.len()) {
             r[i] -= other[i];
@@ -277,17 +276,17 @@ impl<A: Allocator> Sub<ScalarElem<A>, ScalarElem<A>> for ScalarElem<A> {
     }
 }
 
-impl<A: Allocator> Neg<ScalarElem<A>> for ScalarElem<A> {
+impl Neg<ScalarElem> for ScalarElem {
     /// Negate scalar.
-    fn neg(&self) -> ScalarElem<A> {
+    fn neg(&self) -> ScalarElem {
         ScalarElem::zero() - *self
     }
 }
 
-impl<A: Allocator> Mul<ScalarElem<A>, ScalarElem<A>> for ScalarElem<A> {
+impl Mul<ScalarElem, ScalarElem> for ScalarElem {
     /// Multiply scalars.
-    fn mul(&self, other: &ScalarElem<A>) -> ScalarElem<A> {
-        let mut t: ProtBuf<A, i64> = ProtBuf::new_zero(103);
+    fn mul(&self, other: &ScalarElem) -> ScalarElem {
+        let mut t: ProtBuf<i64> = ProtBuf::new_zero(103);
 
         for i in range(0u, 52) {
             for j in range(0u, 52) {
@@ -295,76 +294,76 @@ impl<A: Allocator> Mul<ScalarElem<A>, ScalarElem<A>> for ScalarElem<A> {
             }
         }
 
-        let mut r: ScalarElem<A> = ScalarElem::new_zero();
+        let mut r = ScalarElem::new_zero();
         r.reduce_weak(t[]);
         r
     }
 }
 
-impl<A: Allocator> FromPrimitive for ScalarElem<A> {
+impl FromPrimitive for ScalarElem {
     #[allow(unused_variables)]
-    fn from_i64(n: i64) -> Option<ScalarElem<A>> {
+    fn from_i64(n: i64) -> Option<ScalarElem> {
         None
     }
 
-    fn from_u64(n: u64) -> Option<ScalarElem<A>> {
-        let mut s: ProtBuf8<A> = ProtBuf::new_zero(BYTES_SIZE);
+    fn from_u64(n: u64) -> Option<ScalarElem> {
+        let mut s: ProtBuf8 = ProtBuf::new_zero(BYTES_SIZE);
         common::u64to8_le(s[mut], &n);
         ScalarElem::unpack(&s)
     }
 }
 
-impl<A: Allocator> Default for ScalarElem<A> {
+impl Default for ScalarElem {
     /// Return the scalar value 0 as default.
-    fn default() -> ScalarElem<A> {
+    fn default() -> ScalarElem {
         ScalarElem::new_zero()
     }
 }
 
-impl<A: Allocator> Rand for ScalarElem<A> {
+impl Rand for ScalarElem {
     /// Generate a random `ScalarElem` between `[0, L-1]`, and its value
     /// is not clamped. Be sure to use a secure PRNG when calling this
     /// method. For instance `ScalarElem::new_rand()` uses urandom.
-    fn rand<R: Rng>(rng: &mut R) -> ScalarElem<A> {
-        let b: ProtBuf8<A> = ProtBuf::new_rand(104, rng);
+    fn rand<R: Rng>(rng: &mut R) -> ScalarElem {
+        let b: ProtBuf8 = ProtBuf::new_rand(104, rng);
         ScalarElem::unpack_from_bytes(&b).unwrap()
     }
 }
 
-impl<A: Allocator> Show for ScalarElem<A> {
+impl Show for ScalarElem {
     /// Format as hex-string.
     fn fmt(&self, f: &mut Formatter) -> Result {
-        self.pack::<A>().fmt(f)
+        self.pack().fmt(f)
     }
 }
 
-impl<A: Allocator> ToHex for ScalarElem<A> {
+impl ToHex for ScalarElem {
     fn to_hex(&self) -> String {
-        self.pack::<A>().to_hex()
+        self.pack().to_hex()
     }
 }
 
-impl<A: Allocator> Eq for ScalarElem<A> {
+impl Eq for ScalarElem {
 }
 
-impl<A: Allocator> PartialEq for ScalarElem<A> {
+impl PartialEq for ScalarElem {
     /// Constant-time equality comparison.
-    fn eq(&self, other: &ScalarElem<A>) -> bool {
-        self.pack::<A>() == other.pack::<A>()
+    fn eq(&self, other: &ScalarElem) -> bool {
+        self.pack() == other.pack()
     }
 }
 
 
 #[cfg(test)]
 mod tests {
-    use tars::{BufAlloc, ProtBuf, ProtBuf8};
+    use tars::{ProtBuf, ProtBuf8};
 
     use sc::ScalarElem;
 
 
     #[test]
     fn test_ops_52() {
-        let a: ScalarElem<BufAlloc> = ScalarElem::new_rand();
+        let a = ScalarElem::new_rand();
 
         let apa = a + a;
         let aaa1 = a * apa;
@@ -381,9 +380,8 @@ mod tests {
 
     #[test]
     fn test_ops_64() {
-        let n1: ProtBuf8<BufAlloc> = ProtBuf::new_rand_os(104);
-        let a: ScalarElem<BufAlloc> =
-            ScalarElem::unpack_from_bytes(&n1).unwrap();
+        let n1: ProtBuf8 = ProtBuf::new_rand_os(104);
+        let a = ScalarElem::unpack_from_bytes(&n1).unwrap();
 
         let apa = a + a;
         let aaa1 = a * apa;
@@ -399,9 +397,8 @@ mod tests {
 
     #[test]
     fn test_ops_104() {
-        let n1: ProtBuf8<BufAlloc> = ProtBuf::new_rand_os(104);
-        let a: ScalarElem<BufAlloc> =
-            ScalarElem::unpack_from_bytes(&n1).unwrap();
+        let n1: ProtBuf8 = ProtBuf::new_rand_os(104);
+        let a = ScalarElem::unpack_from_bytes(&n1).unwrap();
 
         let apa = a + a;
         let aaa1 = a * apa;
@@ -435,11 +432,11 @@ mod tests {
             0x30, 0x1a, 0x76, 0x81, 0xcd, 0x24, 0xcf, 0x5c,
             0xde, 0x19, 0x67, 0x03];
 
-        let a: ScalarElem<BufAlloc> = ScalarElem::unpack(&n.as_slice()).unwrap();
+        let a = ScalarElem::unpack(&n.as_slice()).unwrap();
         let apa = a + a;
         let aaa1 = a * apa;
         let s = aaa1 - a;
-        assert!(s.pack::<BufAlloc>()[] == r[]);
+        assert!(s.pack()[] == r[]);
     }
 
     #[test]
@@ -463,12 +460,11 @@ mod tests {
             0x9e, 0x28, 0x2f, 0xce, 0x0e, 0x34, 0xf9, 0xb2,
             0x91, 0xb3, 0x31, 0x06];
 
-        let a: ScalarElem<BufAlloc> =
-            ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
+        let a = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
         let apa = a + a;
         let aaa1 = a * apa;
         let s = aaa1 - a;
-        assert!(s.pack::<BufAlloc>()[] == r[]);
+        assert!(s.pack()[] == r[]);
     }
 
     #[test]
@@ -497,12 +493,11 @@ mod tests {
             0xf5, 0x8e, 0xd8, 0xc7, 0x66, 0xcc, 0x3c, 0x23,
             0xde, 0x63, 0x9d, 0x01];
 
-        let a: ScalarElem<BufAlloc> =
-            ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
+        let a = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
         let apa = a + a;
         let aaa1 = a * apa;
         let s = aaa1 - a;
-        assert!(s.pack::<BufAlloc>()[] == r[]);
+        assert!(s.pack()[] == r[]);
     }
 
     #[test]
@@ -526,9 +521,8 @@ mod tests {
             0x8d, 0x51, 0xcc, 0xef, 0x87, 0xa4, 0x0d, 0x2c,
             0x87, 0xb0, 0xdd, 0x07];
 
-        let s: ScalarElem<BufAlloc> =
-            ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
-        assert!(s.pack::<BufAlloc>()[] == r[]);
+        let s = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
+        assert!(s.pack()[] == r[]);
     }
 
     #[test]
@@ -557,9 +551,8 @@ mod tests {
             0xd4, 0x42, 0x49, 0xcf, 0x33, 0x49, 0x07, 0xdf,
             0xb1, 0x3a, 0xee, 0x00];
 
-        let s: ScalarElem<BufAlloc> =
-            ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
-        assert!(s.pack::<BufAlloc>()[] == r[]);
+        let s = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
+        assert!(s.pack()[] == r[]);
     }
 
     #[test]
@@ -575,7 +568,7 @@ mod tests {
             0, 0, 0, 0];
 
         let s1 = ScalarElem::unpack(&b.as_slice()).unwrap();
-        let s2: ScalarElem<BufAlloc> = FromPrimitive::from_u64(n).unwrap();
+        let s2 = FromPrimitive::from_u64(n).unwrap();
         assert!(s1 == s2);
     }
 }

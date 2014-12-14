@@ -1,4 +1,3 @@
-extern crate tars;
 extern crate curve41417;
 
 use curve41417::ed::GroupElem;

@@ -15,7 +15,6 @@ Install Rust package manager [Cargo](https://github.com/rust-lang/cargo).
 Consider this basic example performing a Diffie-Hellman in Curve41417 Montgomery's representation:
 
 ```rust
-extern crate tars;
 extern crate curve41417;
 
 use curve41417::mont::{gen_key, scalar_mult_base, scalar_mult};

@@ -34,7 +34,7 @@ fn main () {
     // that. Let's use it and multiply `42` by `sk`.
     let sc_sk = ScalarElem::unpack(&sk.read()).unwrap();
     let sc_42 = FromPrimitive::from_u64(1).unwrap();
-    let sc_sk42 = sc_sk * sc_42;
+    let sc_sk42 = &sc_sk * &sc_42;
 
     // We can also pack the result and multiply it to its base point to see if
     // it matches `42 * pke`, as it should. In this case the `GroupElem` is

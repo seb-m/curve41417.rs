@@ -65,7 +65,9 @@ impl FieldElem {
     }
 
     pub fn pack(&self) -> ProtBuf8 {
-        let t = self.clone().reduce();
+        let mut t = self.clone();
+        t.reduce();
+
         let mut r = ProtBuf::new_zero(BYTES_SIZE);
 
         for i in range(0u, FE_SIZE) {
@@ -83,38 +85,37 @@ impl FieldElem {
         common::bytes_cswap::<i64>(cond, self.elem[mut], other.elem[mut]);
     }
 
-    pub fn carry(&self) -> FieldElem {
-        let mut r = self.clone();
+    pub fn carry(&mut self) {
         let mut c: i64;
 
-        for i in range(0u, r.len()) {
-            r[i] += 1_i64 << 16;
-            c = r[i] >> 16;
-            r[(i + 1) * ((i < 25) as uint)] += c - 1 + 67 * (c - 1) *
+        for i in range(0u, self.len()) {
+            self[i] += 1_i64 << 16;
+            c = self[i] >> 16;
+            self[(i + 1) * ((i < 25) as uint)] += c - 1 + 67 * (c - 1) *
                 ((i == 25) as i64);
-            r[i] -= c << 16;
+            self[i] -= c << 16;
         }
-        r
     }
 
     // Fully reduce n mod 2^414 - 17
-    pub fn reduce(&self) -> FieldElem {
-        let mut r = self.clone().carry().carry().carry();
+    pub fn reduce(&mut self) {
+        self.carry();
+        self.carry();
+        self.carry();
         let mut m = FieldElem::new();
 
         for _ in range(0u, 3) {
-            m[0] = r[0] - 0xffef;
+            m[0] = self[0] - 0xffef;
             for j in range(1u, 25) {
-                m[j] = r[j] - 0xffff - ((m[j - 1] >> 16) & 1);
+                m[j] = self[j] - 0xffff - ((m[j - 1] >> 16) & 1);
                 m[j - 1] &= 0xffff;
             }
-            m[25] = r[25] - 0x3fff - ((m[24] >> 16) & 1);
+            m[25] = self[25] - 0x3fff - ((m[24] >> 16) & 1);
             m[24] &= 0xffff;
             let b = (m[25] >> 16) & 1;
             m[25] &= 0xffff;
-            r.cswap(1 - b, &mut m);
+            self.cswap(1 - b, &mut m);
         }
-        r
     }
 
     // Reduce n mod 2^416 - 68 and put limbs between [0, 2^16-1] through carry.
@@ -135,7 +136,9 @@ impl FieldElem {
                           ((*n)[2 * i + 1] as i64 << 8)) * 68;
         }
 
-        Some(r.carry().carry())
+        r.carry();
+        r.carry();
+        Some(r)
     }
 
     pub fn parity_bit(&self) -> u8 {
@@ -151,7 +154,9 @@ impl FieldElem {
             r[i] *= other as i64;
         }
 
-        r.carry().carry()
+        r.carry();
+        r.carry();
+        r
     }
 
     pub fn square(&self) -> FieldElem {
@@ -232,34 +237,58 @@ impl IndexMut<uint, i64> for FieldElem {
     }
 }
 
-impl Add<FieldElem, FieldElem> for FieldElem {
-    fn add(&self, other: &FieldElem) -> FieldElem {
+fn add(a: &mut FieldElem, b: &FieldElem) {
+    for i in range(0u, a.len()) {
+        a[i] += b[i];
+    }
+}
+
+impl<'a, 'b> Add<&'a FieldElem, FieldElem> for &'b FieldElem {
+    fn add(self, other: &FieldElem) -> FieldElem {
         let mut r = self.clone();
-        for i in range(0u, r.len()) {
-            r[i] += other[i];
-        }
+        add(&mut r, other);
         r
     }
 }
 
-impl Sub<FieldElem, FieldElem> for FieldElem {
-    fn sub(&self, other: &FieldElem) -> FieldElem {
+impl<'a> Add<&'a FieldElem, FieldElem> for FieldElem {
+    // Add inplace
+    fn add(mut self, other: &FieldElem) -> FieldElem {
+        add(&mut self, other);
+        self
+    }
+}
+
+fn sub(a: &mut FieldElem, b: &FieldElem) {
+    for i in range(0u, a.len()) {
+        a[i] -= b[i];
+    }
+}
+
+impl<'a, 'b> Sub<&'a FieldElem, FieldElem> for &'b FieldElem {
+    fn sub(self, other: &FieldElem) -> FieldElem {
         let mut r = self.clone();
-        for i in range(0u, r.len()) {
-            r[i] -= other[i];
-        }
+        sub(&mut r, other);
         r
+    }
+}
+
+impl<'a> Sub<&'a FieldElem, FieldElem> for FieldElem {
+    // Sub inplace
+    fn sub(mut self, other: &FieldElem) -> FieldElem {
+        sub(&mut self, other);
+        self
     }
 }
 
 impl Neg<FieldElem> for FieldElem {
     fn neg(&self) -> FieldElem {
-        FieldElem::zero() - *self
+        &FieldElem::zero() - self
     }
 }
 
-impl Mul<FieldElem, FieldElem> for FieldElem {
-    fn mul(&self, other: &FieldElem) -> FieldElem {
+impl<'a, 'b> Mul<&'a FieldElem, FieldElem> for &'b FieldElem {
+    fn mul(self, other: &FieldElem) -> FieldElem {
         let mut u: i64;
         let mut r = FieldElem::new();
 
@@ -274,7 +303,9 @@ impl Mul<FieldElem, FieldElem> for FieldElem {
             r[i] = u;
         }
 
-        r.carry().carry()
+        r.carry();
+        r.carry();
+        r
     }
 }
 

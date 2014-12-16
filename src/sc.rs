@@ -254,9 +254,9 @@ impl IndexMut<uint, i64> for ScalarElem {
     }
 }
 
-impl Add<ScalarElem, ScalarElem> for ScalarElem {
+impl<'a, 'b> Add<&'a ScalarElem, ScalarElem> for &'b ScalarElem {
     /// Add scalars.
-    fn add(&self, other: &ScalarElem) -> ScalarElem {
+    fn add(self, other: &ScalarElem) -> ScalarElem {
         let mut r = self.clone();
         for i in range(0u, self.len()) {
             r[i] += other[i];
@@ -265,9 +265,9 @@ impl Add<ScalarElem, ScalarElem> for ScalarElem {
     }
 }
 
-impl Sub<ScalarElem, ScalarElem> for ScalarElem {
+impl<'a, 'b> Sub<&'a ScalarElem, ScalarElem> for &'b ScalarElem {
     /// Substract scalars.
-    fn sub(&self, other: &ScalarElem) -> ScalarElem {
+    fn sub(self, other: &ScalarElem) -> ScalarElem {
         let mut r = self.clone();
         for i in range(0u, self.len()) {
             r[i] -= other[i];
@@ -279,13 +279,13 @@ impl Sub<ScalarElem, ScalarElem> for ScalarElem {
 impl Neg<ScalarElem> for ScalarElem {
     /// Negate scalar.
     fn neg(&self) -> ScalarElem {
-        ScalarElem::zero() - *self
+        &ScalarElem::zero() - self
     }
 }
 
-impl Mul<ScalarElem, ScalarElem> for ScalarElem {
+impl<'a, 'b> Mul<&'a ScalarElem, ScalarElem> for &'b ScalarElem {
     /// Multiply scalars.
-    fn mul(&self, other: &ScalarElem) -> ScalarElem {
+    fn mul(self, other: &ScalarElem) -> ScalarElem {
         let mut t: ProtBuf<i64> = ProtBuf::new_zero(103);
 
         for i in range(0u, 52) {
@@ -365,15 +365,15 @@ mod tests {
     fn test_ops_52() {
         let a = ScalarElem::new_rand();
 
-        let apa = a + a;
-        let aaa1 = a * apa;
-        let s1 = aaa1 - a;
+        let apa = &a + &a;
+        let aaa1 = &a * &apa;
+        let s1 = &aaa1 - &a;
 
-        let aa = a * a;
-        let aaa2 = aa + aa;
-        let s2 = aaa2 - a;
+        let aa = &a * &a;
+        let aaa2 = &aa + &aa;
+        let s2 = &aaa2 - &a;
 
-        assert!((s1 - s1).is_zero());
+        assert!((&s1 - &s1).is_zero());
         assert!(s1 == s2);
         assert!(s1 != aaa2);
     }
@@ -383,15 +383,15 @@ mod tests {
         let n1: ProtBuf8 = ProtBuf::new_rand_os(104);
         let a = ScalarElem::unpack_from_bytes(&n1).unwrap();
 
-        let apa = a + a;
-        let aaa1 = a * apa;
-        let s1 = aaa1 - a;
+        let apa = &a + &a;
+        let aaa1 = &a * &apa;
+        let s1 = &aaa1 - &a;
 
-        let aa = a * a;
-        let aaa2 = aa + aa;
-        let s2 = aaa2 - a;
+        let aa = &a * &a;
+        let aaa2 = &aa + &aa;
+        let s2 = &aaa2 - &a;
 
-        assert!((s1 - s1).is_zero());
+        assert!((&s1 - &s1).is_zero());
         assert!(s1 == s2);
     }
 
@@ -400,15 +400,15 @@ mod tests {
         let n1: ProtBuf8 = ProtBuf::new_rand_os(104);
         let a = ScalarElem::unpack_from_bytes(&n1).unwrap();
 
-        let apa = a + a;
-        let aaa1 = a * apa;
-        let s1 = aaa1 - a;
+        let apa = &a + &a;
+        let aaa1 = &a * &apa;
+        let s1 = &aaa1 - &a;
 
-        let aa = a * a;
-        let aaa2 = aa + aa;
-        let s2 = aaa2 - a;
+        let aa = &a * &a;
+        let aaa2 = &aa + &aa;
+        let s2 = &aaa2 - &a;
 
-        assert!((s1 - s1).is_zero());
+        assert!((&s1 - &s1).is_zero());
         assert!(s1 == s2);
     }
 
@@ -433,9 +433,9 @@ mod tests {
             0xde, 0x19, 0x67, 0x03];
 
         let a = ScalarElem::unpack(&n.as_slice()).unwrap();
-        let apa = a + a;
-        let aaa1 = a * apa;
-        let s = aaa1 - a;
+        let apa = &a + &a;
+        let aaa1 = &a * &apa;
+        let s = &aaa1 - &a;
         assert!(s.pack()[] == r[]);
     }
 
@@ -461,9 +461,9 @@ mod tests {
             0x91, 0xb3, 0x31, 0x06];
 
         let a = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
-        let apa = a + a;
-        let aaa1 = a * apa;
-        let s = aaa1 - a;
+        let apa = &a + &a;
+        let aaa1 = &a * &apa;
+        let s = &aaa1 - &a;
         assert!(s.pack()[] == r[]);
     }
 
@@ -494,9 +494,9 @@ mod tests {
             0xde, 0x63, 0x9d, 0x01];
 
         let a = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
-        let apa = a + a;
-        let aaa1 = a * apa;
-        let s = aaa1 - a;
+        let apa = &a + &a;
+        let aaa1 = &a * &apa;
+        let s = &aaa1 - &a;
         assert!(s.pack()[] == r[]);
     }
 

@@ -194,7 +194,7 @@ impl GroupElem {
     // Propagate changes made in `x` and `y` to `z` and `t`.
     fn propagate_from_xy(&mut self) {
         self.z = FieldElem::one();
-        self.t = self.x * self.y;
+        self.t = &self.x * &self.y;
     }
 
     /// Pack a group elem's coordinate `y` along with a sign bit taken from
@@ -203,8 +203,8 @@ impl GroupElem {
     pub fn pack(&self) -> ProtBuf8 {
         // Pack y
         let zi = self.z.inv();
-        let tx = self.x * zi;
-        let ty = self.y * zi;
+        let tx = &self.x * &zi;
+        let ty = &self.y * &zi;
         let mut r = ty.pack();
 
         // Sign(x): same as EdDSA25519
@@ -222,9 +222,9 @@ impl GroupElem {
     /// Return a point `q` such that `q=8.self` where `8` is curve's cofactor
     /// applied to this point's instance.
     pub fn scalar_mult_cofactor(&self) -> GroupElem {
-        let mut q = *self + *self;
-        q = q + q;
-        q = q + q;
+        let mut q = self + self;
+        q = &q + &q;
+        q = &q + &q;
         q
     }
 
@@ -233,13 +233,13 @@ impl GroupElem {
     /// `curve41417::mont` scalar multiplications.
     pub fn to_mont(&self) -> ProtBuf8 {
         let zi = self.z.inv();
-        let ty = self.y * zi;
+        let ty = &self.y * &zi;
 
         // u = (1 + y) / (1 - y)
-        let mut num = FieldElem::one() + ty;
-        let mut den = FieldElem::one() - ty;
+        let mut num = &FieldElem::one() + &ty;
+        let mut den = &FieldElem::one() - &ty;
         den = den.inv();
-        num = num * den;
+        num = &num * &den;
         num.pack()
     }
 
@@ -264,17 +264,17 @@ impl GroupElem {
         //  y=(B1*u-1)/(B1*u+1)
 
         // Convert coordinates.
-        let mut t0 = self.z - self.y;
-        t0 = GroupElem::montb1() * t0;
-        let mut t1 = self.z + self.y;
+        let mut t0 = &self.z - &self.y;
+        t0 = &GroupElem::montb1() * &t0;
+        let mut t1 = &self.z + &self.y;
 
         let mut u = t0.inv();
-        u = t1 * u;  // u
+        u = &t1 * &u;  // u
 
-        t0 = self.x * t0;
+        t0 = &self.x * &t0;
         let mut v = t0.inv();
-        v = t1 * v;
-        v = self.z * v;  // v
+        v = &t1 * &v;
+        v = &self.z * &v;  // v
 
         // Few remarks:
         //
@@ -292,30 +292,30 @@ impl GroupElem {
         //
         // - Don't check special cases x!=0 and y=0 => x=0, there are very
         //   unlikely.
-        let upa = u + GroupElem::monta();
+        let upa = &u + &GroupElem::monta();
         let mut c = upa.square();
-        c = c * upa;
-        c = c * u;
+        c = &c * &upa;
+        c = &c * &u;
         let mut r2 = c.clone();
         let mut t = c.clone();
         c = c.pow4125();  // c
 
         // Check u(u+A) is a square i.e. (u*(u+A))^((q-1)/2)=u*(u+A)^3*c^2=1
         t1 = c.square();
-        t = t1 * t;  // t
+        t = &t1 * &t;  // t
         if t.parity_bit() == 0 {
             return None;
         }
 
         // First square root r1=(u/(u+A))^((q+1)/4)=u*(u+A)*c
-        let mut r1 = upa * u;
-        r1 = r1 * c;  // r1
+        let mut r1 = &upa * &u;
+        r1 = &r1 * &c;  // r1
 
         // Second square root r2=((u+A)/u)^((q+1)/4)=u*(u+A)^5*c^3
         t0 = upa.square();
-        r2 = r2 * t0;
-        r2 = r2 * t1;
-        r2 = r2 * c;  // r2
+        r2 = &r2 * &t0;
+        r2 = &r2 * &t1;
+        r2 = &r2 * &c;  // r2
 
         // Choose between r1 and r2 by testing if v is itself a square.
         // Note: checking if v < (q+1)/2 would be more efficient than
@@ -334,17 +334,17 @@ impl GroupElem {
 
         // See comments in elligator_to_representation().
         let mut t1 = n.square();
-        let mut v = FieldElem::one() - t1;
+        let mut v = &FieldElem::one() - &t1;
         v = v.inv();
-        v = GroupElem::monta() * v;
+        v = &GroupElem::monta() * &v;
         v = -v;  // v
 
         t1 = v.square();
-        let mut e = t1 * v;
-        let mut t2 = GroupElem::monta() * t1;
-        e = e + t2;
-        t1 = GroupElem::montb() * v;
-        e = e + t1;
+        let mut e = &t1 * &v;
+        let mut t2 = &GroupElem::monta() * &t1;
+        e = e + &t2;
+        t1 = &GroupElem::montb() * &v;
+        e = e + &t1;
         e = e.pow4139();  // e
 
         let is_e_minus_one: i64 = (1 - e.parity_bit()) as i64;
@@ -354,14 +354,14 @@ impl GroupElem {
         t1 = FieldElem::zero();
         t2 = GroupElem::monta();
         t1.cswap(is_e_minus_one, &mut t2);
-        x = x - t1;  // x
+        x = x - &t1;  // x
 
-        let mut y2 = GroupElem::montb() * x;
+        let mut y2 = &GroupElem::montb() * &x;
         let x2 = x.square();  // x^2
-        let mut y = GroupElem::monta() * x2;
-        y = y + y2;
-        y2 = x2 * x;
-        y2 = y + y2;  // y^2
+        let mut y = &GroupElem::monta() * &x2;
+        y = y + &y2;
+        y2 = &x2 * &x;
+        y2 = y2 + &y;  // y^2
         y = y2.pow4124();
         t1 = -y;
         y.cswap(1 - is_e_minus_one, &mut t1);  // y
@@ -369,13 +369,13 @@ impl GroupElem {
         // Convert to Edwards coordinates.
         let mut p: GroupElem = GroupElem::new();
         t1 = y.inv();
-        p.x = x * t1;
+        p.x = &x * &t1;
 
-        t1 = GroupElem::montb1() * x;
-        t2 = t1 + FieldElem::one();
+        t1 = &GroupElem::montb1() * &x;
+        t2 = &t1 + &FieldElem::one();
         t2 = t2.inv();
-        t1 = t1 - FieldElem::one();
-        p.y = t1 * t2;
+        t1 = t1 - &FieldElem::one();
+        p.y = &t1 * &t2;
 
         p.propagate_from_xy();
         Some(p)
@@ -398,20 +398,20 @@ impl<T: AsSlice<u8>> GroupElem {
         // x = +/- (u/v)^((P+1)/4) = uv(uv^3)^((P-3)/4)
         // with u = 1-y^2, v = 1-dy^2
         let mut num = r.y.square();
-        let mut den = num * GroupElem::edd();
-        num = FieldElem::one() - num;
-        den = FieldElem::one() - den;
+        let mut den = &num * &GroupElem::edd();
+        num = &FieldElem::one() - &num;
+        den = &FieldElem::one() - &den;
 
         let mut t = den.square();
-        t = t * den;
-        t = num * t;
+        t = &t * &den;
+        t = &num * &t;
         t = t.pow4125();
-        t = t * num;
-        r.x = t * den;
+        t = &t * &num;
+        r.x = &t * &den;
 
         // Check valid sqrt
         let mut chk = r.x.square();
-        chk = chk * den;
+        chk = &chk * &den;
         let success = chk == num;
 
         // Choose between x and -x
@@ -440,7 +440,7 @@ impl<T: AsSlice<u8>> GroupElem {
     /// respective multiplications.
     pub fn double_scalar_mult(n1: &T, p1: &GroupElem,
                               n2: &T, p2: &GroupElem) -> GroupElem {
-        p1.scalar_mult(n1) + p2.scalar_mult(n2)
+        &p1.scalar_mult(n1) + &p2.scalar_mult(n2)
     }
 
     /// Return a point `q` such that `q=n.self` where `n` is the scalar
@@ -463,8 +463,8 @@ impl<T: AsSlice<u8>> GroupElem {
         for i in range(0u, 415).rev() {
             let c = ((nb[i / 8] >> (i & 7)) & 1) as i64;
             q.cswap(c, &mut p);
-            p = p + q;
-            q = q + q;
+            p = &p + &q;
+            q = &q + &q;
             q.cswap(c, &mut p);
         }
         q
@@ -506,36 +506,36 @@ impl<T: AsSlice<u8>> GroupElem {
     }
 }
 
-impl Add<GroupElem, GroupElem> for GroupElem {
+impl<'a, 'b> Add<&'a GroupElem, GroupElem> for &'b GroupElem {
     /// Add points.
-    fn add(&self, other: &GroupElem) -> GroupElem {
+    fn add(self, other: &GroupElem) -> GroupElem {
         // 2008/522.pdf section 3.1 (a=1)
-        let a = self.x * other.x;
-        let b = self.y * other.y;
-        let mut c = self.t * other.t;
-        c = c * GroupElem::edd();
-        let d = self.z * other.z;
-        let mut e = self.x + self.y;
-        let mut f = other.x + other.y;
-        e = e * f;
-        e = e - a;
-        e = e - b;
-        f = d - c;
-        let g = d + c;
-        let h = b - a;
+        let a = &self.x * &other.x;
+        let b = &self.y * &other.y;
+        let mut c = &self.t * &other.t;
+        c = &c * &GroupElem::edd();
+        let d = &self.z * &other.z;
+        let mut e = &self.x + &self.y;
+        let mut f = &other.x + &other.y;
+        e = &e * &f;
+        e = e - &a;
+        e = e - &b;
+        f = &d - &c;
+        let g = d + &c;
+        let h = b - &a;
         GroupElem {
-            x: e * f,
-            y: g * h,
-            z: f * g,
-            t: e * h
+            x: &e * &f,
+            y: &g * &h,
+            z: &f * &g,
+            t: &e * &h
         }
     }
 }
 
-impl Sub<GroupElem, GroupElem> for GroupElem {
+impl<'a, 'b> Sub<&'a GroupElem, GroupElem> for &'b GroupElem {
     /// Subtract points.
-    fn sub(&self, other: &GroupElem) -> GroupElem {
-        *self + (-(*other))
+    fn sub(self, other: &GroupElem) -> GroupElem {
+        self + &(-(*other))
     }
 }
 
@@ -549,25 +549,25 @@ impl Neg<GroupElem> for GroupElem {
     }
 }
 
-impl<T: AsSlice<u8>> Mul<T, GroupElem> for GroupElem {
+impl<'a, 'b, T: AsSlice<u8>> Mul<&'a T, GroupElem> for &'b GroupElem {
     /// Multiply point `self` with scalar value `other`.
-    fn mul(&self, other: &T) -> GroupElem {
+    fn mul(self, other: &T) -> GroupElem {
         self.scalar_mult(other)
     }
 }
 
-impl Mul<GroupElem, ProtBuf8> for ProtBuf8 {
+impl<'a, 'b> Mul<&'a GroupElem, ProtBuf8> for &'b ProtBuf8 {
     /// Multiply scalar `self` with point `other` and return a packed point.
     /// Note: the same allocator is used for both operands and for the
     /// packed result.
-    fn mul(&self, other: &GroupElem) -> ProtBuf8 {
+    fn mul(self, other: &GroupElem) -> ProtBuf8 {
         other.scalar_mult(self).pack()
     }
 }
 
-impl Mul<GroupElem, ProtKey8> for ProtKey8 {
+impl<'a, 'b> Mul<&'a GroupElem, ProtKey8> for &'b ProtKey8 {
     /// Multiply scalar `self` with point `other` and return a packed point.
-    fn mul(&self, other: &GroupElem) -> ProtKey8 {
+    fn mul(self, other: &GroupElem) -> ProtKey8 {
         ProtKey::from_buf(other.scalar_mult(&self.read()).pack())
     }
 }
@@ -632,9 +632,9 @@ mod tests {
         let sk2 = GroupElem::gen_key();
         let pk2 = GroupElem::scalar_mult_base(&sk2.read());
 
-        let ssk1 = pk2 * sk1.read();
-        let ssk2 = sk2 * pk1;
-        let ssk3 = pk1 * sk2.read();
+        let ssk1 = &pk2 * &sk1.read();
+        let ssk2 = &sk2 * &pk1;
+        let ssk3 = &pk1 * &sk2.read();
 
         assert!(ProtKey::from_buf(ssk1.pack()) == ssk2);
         assert!(ssk1 == ssk3);
@@ -665,7 +665,7 @@ mod tests {
         let bp = GroupElem::base();
 
         scn.clamp_41417();
-        let q = bp * scn;
+        let q = &bp * &scn;
 
         assert!(q.pack() == scr);
     }
@@ -674,12 +674,12 @@ mod tests {
     fn test_ops() {
         let mut b = GroupElem::base();
         for _ in range(0u, 10) {
-            b = b + GroupElem::base();
+            b = &b + &GroupElem::base();
         }
 
         let nb = GroupElem::base();
         for _ in range(0u, 10) {
-            b = b - nb;
+            b = &b - &nb;
         }
 
         assert!(GroupElem::base() == b);
@@ -692,16 +692,16 @@ mod tests {
         cofactor[0] = 0x8;
 
         let bp = GroupElem::base();
-        let q = bp * n;
+        let q = &bp * &n;
         let r = q.scalar_mult_cofactor();
 
         let mut s = q.clone();
         for _ in range(0u, 7) {
-            s = s + q;
+            s = &s + &q;
         }
         assert!(s == r);
 
-        s = q * cofactor;
+        s = &q * &cofactor;
         assert!(s == r);
     }
 
@@ -710,12 +710,12 @@ mod tests {
         let bp = GroupElem::base();
         let n: ProtBuf8 = ProtBuf::new_rand_os(SCALAR_SIZE);
 
-        let q = bp * n;
+        let q = &bp * &n;
         let qs = q.pack();
 
         let zi = q.z.inv();
-        let tx = q.x * zi;
-        let ty = q.y * zi;
+        let tx = &q.x * &zi;
+        let ty = &q.y * &zi;
         let xs = tx.pack();
         let ys = ty.pack();
 
@@ -735,7 +735,7 @@ mod tests {
         b1.clamp_41417();
 
         let m1 = mont::scalar_mult_base(&b1);
-        let e1 = bp * b1;
+        let e1 = &bp * &b1;
         let m11 = e1.to_mont();
 
         assert!(m1 == m11);

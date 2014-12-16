@@ -66,30 +66,30 @@ pub fn scalar_mult<T: AsSlice<u8>, U: AsSlice<u8>>(n: &T, p: &U) -> ProtBuf8 {
         r = (z[i >> 3] >> (i & 7)) & 1;
         a.cswap(r as i64, &mut b);
         c.cswap(r as i64, &mut d);
-        e = a + c;
-        a = a - c;
-        c = b + d;
-        b = b - d;
+        e = &a + &c;
+        a = a - &c;
+        c = &b + &d;
+        b = b - &d;
         d = e.square();
         f = a.square();
-        a = c * a;
-        c = b * e;
-        e = a + c;
-        a = a - c;
+        a = &a * &c;
+        c = &b * &e;
+        e = &a + &c;
+        a = a - &c;
         b = a.square();
-        c = d - f;
-        a = c * a24();
-        a = a + d;
-        c = c * a;
-        a = d * f;
-        d = b * pe;
+        c = &d - &f;
+        a = &c * &a24();
+        a = a + &d;
+        c = &c * &a;
+        a = &d * &f;
+        d = &b * &pe;
         b = e.square();
         a.cswap(r as i64, &mut b);
         c.cswap(r as i64, &mut d);
     }
 
     c = c.inv();
-    a = a * c;
+    a = &a * &c;
     a.pack()
 }
 

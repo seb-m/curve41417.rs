@@ -59,7 +59,7 @@ pub fn bytes_cswap<T: SignedInt>(cond: T, x: &mut [T], y: &mut [T]) {
     }
 }
 
-/// Instanciate a PRNG based on `OsRng` (on unixes it relies on
+/// Instantiate a PRNG based on `OsRng` (on unixes it relies on
 /// `/etc/[u]random`).
 pub fn os_rng() -> OsRng {
     OsRng::new().unwrap()

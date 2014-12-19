@@ -287,6 +287,12 @@ impl<'a> Neg<FieldElem> for &'a FieldElem {
     }
 }
 
+impl Neg<FieldElem> for FieldElem {
+    fn neg(self) -> FieldElem {
+        &FieldElem::zero() - &self
+    }
+}
+
 impl<'a, 'b> Mul<&'a FieldElem, FieldElem> for &'b FieldElem {
     fn mul(self, other: &FieldElem) -> FieldElem {
         let mut u: i64;

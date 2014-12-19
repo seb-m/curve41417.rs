@@ -281,8 +281,8 @@ impl<'a> Sub<&'a FieldElem, FieldElem> for FieldElem {
     }
 }
 
-impl Neg<FieldElem> for FieldElem {
-    fn neg(&self) -> FieldElem {
+impl<'a> Neg<FieldElem> for &'a FieldElem {
+    fn neg(self) -> FieldElem {
         &FieldElem::zero() - self
     }
 }

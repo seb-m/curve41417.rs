@@ -337,7 +337,7 @@ impl GroupElem {
         let mut v = &FieldElem::one() - &t1;
         v = v.inv();
         v = &GroupElem::monta() * &v;
-        v = -v;  // v
+        v = -&v;  // v
 
         t1 = v.square();
         let mut e = &t1 * &v;
@@ -349,7 +349,7 @@ impl GroupElem {
 
         let is_e_minus_one: i64 = (1 - e.parity_bit()) as i64;
         let mut x = v.clone();
-        t1 = -v;
+        t1 = -&v;
         x.cswap(is_e_minus_one, &mut t1);
         t1 = FieldElem::zero();
         t2 = GroupElem::monta();
@@ -363,7 +363,7 @@ impl GroupElem {
         y2 = &x2 * &x;
         y2 = y2 + &y;  // y^2
         y = y2.pow4124();
-        t1 = -y;
+        t1 = -&y;
         y.cswap(1 - is_e_minus_one, &mut t1);  // y
 
         // Convert to Edwards coordinates.
@@ -415,7 +415,7 @@ impl<T: AsSlice<u8>> GroupElem {
         let success = chk == num;
 
         // Choose between x and -x
-        let mut nrx = -r.x;
+        let mut nrx = -&r.x;
         let parity = r.x.parity_bit();
         r.x.cswap(((bytes.as_slice()[51] >> 7) ^ parity) as i64, &mut nrx);
         r.propagate_from_xy();
@@ -535,16 +535,16 @@ impl<'a, 'b> Add<&'a GroupElem, GroupElem> for &'b GroupElem {
 impl<'a, 'b> Sub<&'a GroupElem, GroupElem> for &'b GroupElem {
     /// Subtract points.
     fn sub(self, other: &GroupElem) -> GroupElem {
-        self + &(-(*other))
+        self + &(-other)
     }
 }
 
-impl Neg<GroupElem> for GroupElem {
+impl<'a> Neg<GroupElem> for &'a GroupElem {
     /// Negate point.
-    fn neg(&self) -> GroupElem {
+    fn neg(self) -> GroupElem {
         let mut r = self.clone();
-        r.x = -r.x;
-        r.t = -r.t;
+        r.x = -&r.x;
+        r.t = -&r.t;
         r
     }
 }

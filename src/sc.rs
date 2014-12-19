@@ -276,9 +276,9 @@ impl<'a, 'b> Sub<&'a ScalarElem, ScalarElem> for &'b ScalarElem {
     }
 }
 
-impl Neg<ScalarElem> for ScalarElem {
+impl<'a> Neg<ScalarElem> for &'a ScalarElem {
     /// Negate scalar.
-    fn neg(&self) -> ScalarElem {
+    fn neg(self) -> ScalarElem {
         &ScalarElem::zero() - self
     }
 }

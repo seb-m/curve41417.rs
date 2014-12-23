@@ -1,5 +1,5 @@
 //! Edwards-form Curve41417 representation
-use serialize::hex::ToHex;
+use rustc_serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 

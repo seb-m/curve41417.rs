@@ -1,5 +1,5 @@
 //! A Curve41417 field element representation
-use serialize::hex::ToHex;
+use rustc_serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 

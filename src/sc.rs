@@ -1,5 +1,5 @@
 //! Curve41417 scalar operations
-use serialize::hex::ToHex;
+use rustc_serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 use std::rand::{Rand, Rng};

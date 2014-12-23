@@ -7,9 +7,9 @@ A pure-[Rust](http://www.rust-lang.org/) implementation of [Curve41417](http://s
 [![Build Status](https://travis-ci.org/seb-m/curve41417.rs.svg?branch=master)](https://travis-ci.org/seb-m/curve41417.rs)
 
 
-## Building from source
+## Documentation
 
-Install Rust package manager [Cargo](https://github.com/rust-lang/cargo).
+The generated documentation is available [here](http://seb.dbzteam.org/rs/curve41417/curve41417/).
 
 
 ## Example
@@ -34,11 +34,6 @@ assert!(shared1 == shared2);
 ```
 
 For a more detailed example see [curve41417_ops.rs](examples/curve41417_ops.rs).
-
-
-## Documentation
-
-The generated documentation is also available [here](http://seb.dbzteam.org/rs/curve41417/curve41417/).
 
 
 ## Notes

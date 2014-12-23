@@ -14,7 +14,7 @@ The generated documentation is available [here](http://seb.dbzteam.org/rs/curve4
 
 ## Example
 
-Consider this basic example performing a Diffie-Hellman in Curve41417 Montgomery's representation:
+This basic example performs a Diffie-Hellman in Curve41417 Montgomery's representation:
 
 ```rust
 extern crate curve41417;
@@ -33,7 +33,7 @@ let shared2 = scalar_mult(&sk2.read(), &pk1);
 assert!(shared1 == shared2);
 ```
 
-For a more detailed example see [curve41417_ops.rs](examples/curve41417_ops.rs).
+For another example see [curve41417_ops.rs](examples/curve41417_ops.rs).
 
 
 ## Notes

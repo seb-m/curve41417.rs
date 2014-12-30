@@ -770,12 +770,13 @@ mod tests {
             0x7e, 0xd9, 0xec, 0xbb, 0xe7, 0xff, 0x1b, 0xae,
             0xd0, 0x11, 0xd4, 0x1c];
 
-        let p = GroupElem::elligator_from_representation(&n.as_slice()).unwrap();
-        assert!(x[] == p.x.pack()[]);
-        assert!(y[] == p.y.pack()[]);
+        let p =
+            GroupElem::elligator_from_representation(&n.as_slice()).unwrap();
+        assert!(x.as_slice() == p.x.pack().as_slice());
+        assert!(y.as_slice() == p.y.pack().as_slice());
 
         let n2 = p.elligator_to_representation().unwrap();
-        assert!(n[] == n2[]);
+        assert!(n.as_slice() == n2.as_slice());
     }
 
     #[test]
@@ -827,11 +828,12 @@ mod tests {
             0xe8, 0x83, 0xe9, 0x22];
 
         let p = GroupElem::elligator_from_bytes(&n.as_slice()).unwrap();
-        assert!(x[] == p.x.pack()[]);
-        assert!(y[] == p.y.pack()[]);
+        assert!(x.as_slice() == p.x.pack().as_slice());
+        assert!(y.as_slice() == p.y.pack().as_slice());
 
         let r = p.elligator_to_representation().unwrap();
-        assert!(r[] == r1[] || r[] == r2[]);
+        assert!(r.as_slice() == r1.as_slice() ||
+                r.as_slice() == r2.as_slice());
     }
 
     #[test]

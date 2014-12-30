@@ -9,8 +9,12 @@ authors = ["Sebastien Martini <seb@dbzteam.org>"]
 [lib]
 name = "curve41417"
 
-[dependencies]
-rustc-serialize = "0.1.4"
+# FIXME: temp
+#[dependencies]
+#rustc-serialize = "0.1.4"
+
+[dependencies.rustc-serialize]
+git = "https://github.com/rust-lang/rustc-serialize"
 
 [dependencies.tars]
 git = "https://github.com/seb-m/tars"

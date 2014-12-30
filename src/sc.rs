@@ -64,14 +64,14 @@ impl ScalarElem {
     // Return a reference to the limb at index `index`. Fails if
     // `index` is out of bounds.
     #[doc(hidden)]
-    pub fn get(&self, index: uint) -> &i64 {
+    pub fn get(&self, index: uint) -> Option<&i64> {
         self.elem.get(index)
     }
 
     // Return a mutable reference to the limb at index `index`. Fails
     // if `index` is out of bounds.
     #[doc(hidden)]
-    pub fn get_mut(&mut self, index: uint) -> &mut i64 {
+    pub fn get_mut(&mut self, index: uint) -> Option<&mut i64> {
         self.elem.get_mut(index)
     }
 
@@ -83,7 +83,9 @@ impl ScalarElem {
     // as condition and must be `0` or `1` strictly. Values are swapped iff
     // `cond == 1`.
     fn cswap(&mut self, cond: i64, other: &mut ScalarElem) {
-        common::bytes_cswap::<i64>(cond, self.elem[mut], other.elem[mut]);
+        common::bytes_cswap::<i64>(cond,
+                                   self.elem.as_mut_slice(),
+                                   other.elem.as_mut_slice());
     }
 
     // Requirements: len >= 52
@@ -244,13 +246,13 @@ impl Clone for ScalarElem {
 
 impl Index<uint, i64> for ScalarElem {
     fn index(&self, index: &uint) -> &i64 {
-        self.get(*index)
+        self.get(*index).unwrap()
     }
 }
 
 impl IndexMut<uint, i64> for ScalarElem {
     fn index_mut(&mut self, index: &uint) -> &mut i64 {
-        self.get_mut(*index)
+        self.get_mut(*index).unwrap()
     }
 }
 
@@ -308,7 +310,7 @@ impl FromPrimitive for ScalarElem {
 
     fn from_u64(n: u64) -> Option<ScalarElem> {
         let mut s: ProtBuf8 = ProtBuf::new_zero(BYTES_SIZE);
-        common::u64to8_le(s[mut], &n);
+        common::u64to8_le(s.as_mut_slice(), &n);
         ScalarElem::unpack(&s)
     }
 }

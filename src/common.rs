@@ -24,7 +24,7 @@ pub trait Scalar {
 
 impl<A: Allocator> Scalar for ProtBuf8<A> {
     fn clamp_41417(&mut self) {
-       clamp_buf(self[mut]);
+       clamp_buf(self.as_mut_slice());
     }
 }
 

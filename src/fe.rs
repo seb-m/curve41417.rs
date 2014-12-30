@@ -41,13 +41,13 @@ impl FieldElem {
 
     // Return a reference to the limb at index `index`. Fails if
     // `index` is out of bounds.
-    pub fn get(&self, index: uint) -> &i64 {
+    pub fn get(&self, index: uint) -> Option<&i64> {
         self.elem.get(index)
     }
 
     // Return a mutable reference to the limb at index `index`. Fails
     // if `index` is out of bounds.
-    pub fn get_mut(&mut self, index: uint) -> &mut i64 {
+    pub fn get_mut(&mut self, index: uint) -> Option<&mut i64> {
         self.elem.get_mut(index)
     }
 
@@ -82,7 +82,9 @@ impl FieldElem {
     }
 
     pub fn cswap(&mut self, cond: i64, other: &mut FieldElem) {
-        common::bytes_cswap::<i64>(cond, self.elem[mut], other.elem[mut]);
+        common::bytes_cswap::<i64>(cond,
+                                   self.elem.as_mut_slice(),
+                                   other.elem.as_mut_slice());
     }
 
     pub fn carry(&mut self) {
@@ -227,13 +229,13 @@ impl Clone for FieldElem {
 
 impl Index<uint, i64> for FieldElem {
     fn index(&self, index: &uint) -> &i64 {
-        self.get(*index)
+        self.get(*index).unwrap()
     }
 }
 
 impl IndexMut<uint, i64> for FieldElem {
     fn index_mut(&mut self, index: &uint) -> &mut i64 {
-        self.get_mut(*index)
+        self.get_mut(*index).unwrap()
     }
 }
 

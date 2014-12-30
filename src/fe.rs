@@ -10,7 +10,7 @@ use common::{mod, BYTES_SIZE};
 
 const FE_SIZE: uint = 26;
 
-const ONE: [i64, ..FE_SIZE] = [
+const ONE: [i64; FE_SIZE] = [
     1, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,

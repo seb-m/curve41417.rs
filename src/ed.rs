@@ -604,7 +604,6 @@ impl ToHex for GroupElem {
 }
 
 impl PartialEq for GroupElem {
-    /// Constant-time points equality comparison.
     fn eq(&self, other: &GroupElem) -> bool {
         self.pack() == other.pack()
     }

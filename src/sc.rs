@@ -349,7 +349,6 @@ impl Eq for ScalarElem {
 }
 
 impl PartialEq for ScalarElem {
-    /// Constant-time equality comparison.
     fn eq(&self, other: &ScalarElem) -> bool {
         self.pack() == other.pack()
     }

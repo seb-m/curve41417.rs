@@ -61,15 +61,15 @@ impl ScalarElem {
         }
     }
 
-    // Return a reference to the limb at index `index`. Fails if
-    // `index` is out of bounds.
+    // Return a reference to the limb at index `index`; otherwise
+    // return `None` if `index` is out of bounds.
     #[doc(hidden)]
     pub fn get(&self, index: uint) -> Option<&i64> {
         self.elem.get(index)
     }
 
-    // Return a mutable reference to the limb at index `index`. Fails
-    // if `index` is out of bounds.
+    // Return a mutable reference to the limb at index `index`; otherwise
+    // return `None` if `index` is out of bounds.
     #[doc(hidden)]
     pub fn get_mut(&mut self, index: uint) -> Option<&mut i64> {
         self.elem.get_mut(index)
@@ -246,13 +246,13 @@ impl Clone for ScalarElem {
 
 impl Index<uint, i64> for ScalarElem {
     fn index(&self, index: &uint) -> &i64 {
-        self.get(*index).unwrap()
+        &self.elem[*index]
     }
 }
 
 impl IndexMut<uint, i64> for ScalarElem {
     fn index_mut(&mut self, index: &uint) -> &mut i64 {
-        self.get_mut(*index).unwrap()
+        &mut self.elem[*index]
     }
 }
 

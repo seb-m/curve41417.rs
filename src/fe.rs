@@ -5,7 +5,7 @@ use std::fmt::{Show, Formatter, Result};
 
 use tars::{ProtBuf, ProtBuf8};
 
-use common::{mod, BYTES_SIZE};
+use common::{self, BYTES_SIZE};
 
 
 const FE_SIZE: uint = 26;

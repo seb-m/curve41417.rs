@@ -6,7 +6,7 @@ use std::rand::{Rand, Rng};
 
 use tars::{ProtBuf, ProtBuf8};
 
-use common::{mod, BYTES_SIZE};
+use common::{self, BYTES_SIZE};
 
 
 const SCE_SIZE: uint = 52;

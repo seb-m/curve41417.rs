@@ -14,11 +14,11 @@
 #![feature(default_type_params)]
 #![feature(slicing_syntax)]
 #![feature(phase)]
+#![feature(old_orphan_check)]
 
 #[cfg(test)] extern crate test;
 #[cfg(test)] #[phase(plugin, link)] extern crate log;
 
-extern crate "rustc-serialize" as rustc_serialize;
 extern crate tars;
 
 pub use common::{SCALAR_SIZE, BYTES_SIZE, Scalar};

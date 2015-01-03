@@ -1,7 +1,7 @@
 //! A Curve41417 field element representation
-use rustc_serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
+use std::ops::{Add, Sub, Neg, Mul, Index, IndexMut};
 
 use tars::{ProtBuf, ProtBuf8};
 
@@ -60,7 +60,7 @@ impl FieldElem {
 
         let mut n = FieldElem::new();
         for i in range(0u, FE_SIZE) {
-            n[i] = bytes[2 * i] as i64 + (bytes[2 * i + 1] as i64 << 8);
+            n[i] = bytes[2 * i] as i64 + ((bytes[2 * i + 1] as i64) << 8);
         }
         n[25] &= 0x3fff; // mask top 2 bits
         Some(n)
@@ -133,11 +133,11 @@ impl FieldElem {
         let mut r = FieldElem::new();
 
         for i in range(0u, FE_SIZE) {
-            r[i] = (*n)[2 * i] as i64 + ((*n)[2 * i + 1] as i64 << 8);
+            r[i] = (*n)[2 * i] as i64 + (((*n)[2 * i + 1] as i64) << 8);
         }
         for i in range(FE_SIZE, n.len() >> 1) {
             r[i - 26] += ((*n)[2 * i] as i64 +
-                          ((*n)[2 * i + 1] as i64 << 8)) * 68;
+                          (((*n)[2 * i + 1] as i64) << 8)) * 68;
         }
 
         r.carry();
@@ -328,12 +328,6 @@ impl Default for FieldElem {
 impl Show for FieldElem {
     fn fmt(&self, f: &mut Formatter) -> Result {
         self.pack().fmt(f)
-    }
-}
-
-impl ToHex for FieldElem {
-    fn to_hex(&self) -> String {
-        self.pack().to_hex()
     }
 }
 

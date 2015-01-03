@@ -1,5 +1,7 @@
 extern crate curve41417;
 
+use std::num::FromPrimitive;
+
 use curve41417::ed::GroupElem;
 use curve41417::mont;
 use curve41417::sc::ScalarElem;

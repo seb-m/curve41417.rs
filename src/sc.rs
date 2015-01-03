@@ -1,7 +1,8 @@
 //! Curve41417 scalar operations
-use rustc_serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
+use std::num::FromPrimitive;
+use std::ops::{Add, Sub, Neg, Mul, Index, IndexMut};
 use std::rand::{Rand, Rng};
 
 use tars::{ProtBuf, ProtBuf8};
@@ -333,15 +334,8 @@ impl Rand for ScalarElem {
 }
 
 impl Show for ScalarElem {
-    /// Format as hex-string.
     fn fmt(&self, f: &mut Formatter) -> Result {
         self.pack().fmt(f)
-    }
-}
-
-impl ToHex for ScalarElem {
-    fn to_hex(&self) -> String {
-        self.pack().to_hex()
     }
 }
 
@@ -357,6 +351,8 @@ impl PartialEq for ScalarElem {
 
 #[cfg(test)]
 mod tests {
+    use std::num::FromPrimitive;
+
     use tars::{ProtBuf, ProtBuf8};
 
     use sc::ScalarElem;

@@ -1,7 +1,7 @@
 //! Edwards-form Curve41417 representation
-use rustc_serialize::hex::ToHex;
 use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
+use std::ops::{Add, Sub, Neg, Mul};
 
 use tars::{ProtBuf, ProtKey, ProtBuf8, ProtKey8};
 
@@ -591,15 +591,8 @@ impl Default for GroupElem {
 }
 
 impl Show for GroupElem {
-    /// Format as hex-string.
     fn fmt(&self, f: &mut Formatter) -> Result {
         self.pack().fmt(f)
-    }
-}
-
-impl ToHex for GroupElem {
-    fn to_hex(&self) -> String {
-        self.pack().to_hex()
     }
 }
 

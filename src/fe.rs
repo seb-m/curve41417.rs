@@ -229,13 +229,17 @@ impl Clone for FieldElem {
     }
 }
 
-impl Index<uint, i64> for FieldElem {
+impl Index<uint> for FieldElem {
+    type Output = i64;
+
     fn index(&self, index: &uint) -> &i64 {
         &self.elem[*index]
     }
 }
 
-impl IndexMut<uint, i64> for FieldElem {
+impl IndexMut<uint> for FieldElem {
+    type Output = i64;
+
     fn index_mut(&mut self, index: &uint) -> &mut i64 {
         &mut self.elem[*index]
     }
@@ -247,7 +251,9 @@ fn add(a: &mut FieldElem, b: &FieldElem) {
     }
 }
 
-impl<'a, 'b> Add<&'a FieldElem, FieldElem> for &'b FieldElem {
+impl<'a, 'b> Add<&'a FieldElem> for &'b FieldElem {
+    type Output = FieldElem;
+
     fn add(self, other: &FieldElem) -> FieldElem {
         let mut r = self.clone();
         add(&mut r, other);
@@ -255,7 +261,9 @@ impl<'a, 'b> Add<&'a FieldElem, FieldElem> for &'b FieldElem {
     }
 }
 
-impl<'a> Add<&'a FieldElem, FieldElem> for FieldElem {
+impl<'a> Add<&'a FieldElem> for FieldElem {
+    type Output = FieldElem;
+
     // Add inplace
     fn add(mut self, other: &FieldElem) -> FieldElem {
         add(&mut self, other);
@@ -269,7 +277,9 @@ fn sub(a: &mut FieldElem, b: &FieldElem) {
     }
 }
 
-impl<'a, 'b> Sub<&'a FieldElem, FieldElem> for &'b FieldElem {
+impl<'a, 'b> Sub<&'a FieldElem> for &'b FieldElem {
+    type Output = FieldElem;
+
     fn sub(self, other: &FieldElem) -> FieldElem {
         let mut r = self.clone();
         sub(&mut r, other);
@@ -277,7 +287,9 @@ impl<'a, 'b> Sub<&'a FieldElem, FieldElem> for &'b FieldElem {
     }
 }
 
-impl<'a> Sub<&'a FieldElem, FieldElem> for FieldElem {
+impl<'a> Sub<&'a FieldElem> for FieldElem {
+    type Output = FieldElem;
+
     // Sub inplace
     fn sub(mut self, other: &FieldElem) -> FieldElem {
         sub(&mut self, other);
@@ -285,19 +297,25 @@ impl<'a> Sub<&'a FieldElem, FieldElem> for FieldElem {
     }
 }
 
-impl<'a> Neg<FieldElem> for &'a FieldElem {
+impl<'a> Neg for &'a FieldElem {
+    type Output = FieldElem;
+
     fn neg(self) -> FieldElem {
         &FieldElem::zero() - self
     }
 }
 
-impl Neg<FieldElem> for FieldElem {
+impl Neg for FieldElem {
+    type Output = FieldElem;
+
     fn neg(self) -> FieldElem {
         &FieldElem::zero() - &self
     }
 }
 
-impl<'a, 'b> Mul<&'a FieldElem, FieldElem> for &'b FieldElem {
+impl<'a, 'b> Mul<&'a FieldElem> for &'b FieldElem {
+    type Output = FieldElem;
+
     fn mul(self, other: &FieldElem) -> FieldElem {
         let mut u: i64;
         let mut r = FieldElem::new();

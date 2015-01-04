@@ -506,7 +506,9 @@ impl<T: AsSlice<u8>> GroupElem {
     }
 }
 
-impl<'a, 'b> Add<&'a GroupElem, GroupElem> for &'b GroupElem {
+impl<'a, 'b> Add<&'a GroupElem> for &'b GroupElem {
+    type Output = GroupElem;
+
     /// Add points.
     fn add(self, other: &GroupElem) -> GroupElem {
         // 2008/522.pdf section 3.1 (a=1)
@@ -532,14 +534,18 @@ impl<'a, 'b> Add<&'a GroupElem, GroupElem> for &'b GroupElem {
     }
 }
 
-impl<'a, 'b> Sub<&'a GroupElem, GroupElem> for &'b GroupElem {
+impl<'a, 'b> Sub<&'a GroupElem> for &'b GroupElem {
+    type Output = GroupElem;
+
     /// Subtract points.
     fn sub(self, other: &GroupElem) -> GroupElem {
         self + &(-other)
     }
 }
 
-impl<'a> Neg<GroupElem> for &'a GroupElem {
+impl<'a> Neg for &'a GroupElem {
+    type Output = GroupElem;
+
     /// Negate point.
     fn neg(self) -> GroupElem {
         let mut r = self.clone();
@@ -549,14 +555,18 @@ impl<'a> Neg<GroupElem> for &'a GroupElem {
     }
 }
 
-impl<'a, 'b, T: AsSlice<u8>> Mul<&'a T, GroupElem> for &'b GroupElem {
+impl<'a, 'b, T> Mul<&'a T> for &'b GroupElem where T: AsSlice<u8> {
+    type Output = GroupElem;
+
     /// Multiply point `self` with scalar value `other`.
     fn mul(self, other: &T) -> GroupElem {
         self.scalar_mult(other)
     }
 }
 
-impl<'a, 'b> Mul<&'a GroupElem, ProtBuf8> for &'b ProtBuf8 {
+impl<'a, 'b> Mul<&'a GroupElem> for &'b ProtBuf8 {
+    type Output = ProtBuf8;
+
     /// Multiply scalar `self` with point `other` and return a packed point.
     /// Note: the same allocator is used for both operands and for the
     /// packed result.
@@ -565,7 +575,9 @@ impl<'a, 'b> Mul<&'a GroupElem, ProtBuf8> for &'b ProtBuf8 {
     }
 }
 
-impl<'a, 'b> Mul<&'a GroupElem, ProtKey8> for &'b ProtKey8 {
+impl<'a, 'b> Mul<&'a GroupElem> for &'b ProtKey8 {
+    type Output = ProtKey8;
+
     /// Multiply scalar `self` with point `other` and return a packed point.
     fn mul(self, other: &GroupElem) -> ProtKey8 {
         ProtKey::from_buf(other.scalar_mult(&self.read()).pack())

@@ -15,6 +15,7 @@
 #![feature(slicing_syntax)]
 #![feature(phase)]
 #![feature(old_orphan_check)]
+#![feature(associated_types)]
 
 #[cfg(test)] extern crate test;
 #[cfg(test)] #[phase(plugin, link)] extern crate log;

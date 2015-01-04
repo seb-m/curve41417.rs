@@ -245,19 +245,25 @@ impl Clone for ScalarElem {
     }
 }
 
-impl Index<uint, i64> for ScalarElem {
+impl Index<uint> for ScalarElem {
+    type Output = i64;
+
     fn index(&self, index: &uint) -> &i64 {
         &self.elem[*index]
     }
 }
 
-impl IndexMut<uint, i64> for ScalarElem {
+impl IndexMut<uint> for ScalarElem {
+    type Output = i64;
+
     fn index_mut(&mut self, index: &uint) -> &mut i64 {
         &mut self.elem[*index]
     }
 }
 
-impl<'a, 'b> Add<&'a ScalarElem, ScalarElem> for &'b ScalarElem {
+impl<'a, 'b> Add<&'a ScalarElem> for &'b ScalarElem {
+    type Output = ScalarElem;
+
     /// Add scalars.
     fn add(self, other: &ScalarElem) -> ScalarElem {
         let mut r = self.clone();
@@ -268,7 +274,9 @@ impl<'a, 'b> Add<&'a ScalarElem, ScalarElem> for &'b ScalarElem {
     }
 }
 
-impl<'a, 'b> Sub<&'a ScalarElem, ScalarElem> for &'b ScalarElem {
+impl<'a, 'b> Sub<&'a ScalarElem> for &'b ScalarElem {
+    type Output = ScalarElem;
+
     /// Substract scalars.
     fn sub(self, other: &ScalarElem) -> ScalarElem {
         let mut r = self.clone();
@@ -279,14 +287,18 @@ impl<'a, 'b> Sub<&'a ScalarElem, ScalarElem> for &'b ScalarElem {
     }
 }
 
-impl<'a> Neg<ScalarElem> for &'a ScalarElem {
+impl<'a> Neg for &'a ScalarElem {
+    type Output = ScalarElem;
+
     /// Negate scalar.
     fn neg(self) -> ScalarElem {
         &ScalarElem::zero() - self
     }
 }
 
-impl<'a, 'b> Mul<&'a ScalarElem, ScalarElem> for &'b ScalarElem {
+impl<'a, 'b> Mul<&'a ScalarElem> for &'b ScalarElem {
+    type Output = ScalarElem;
+
     /// Multiply scalars.
     fn mul(self, other: &ScalarElem) -> ScalarElem {
         let mut t: ProtBuf<i64> = ProtBuf::new_zero(103);

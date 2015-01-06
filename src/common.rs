@@ -29,7 +29,7 @@ impl<A: Allocator> Scalar for ProtBuf8<A> {
 }
 
 fn clamp_buf(b: &mut [u8]) {
-    assert!(b.len() == SCALAR_SIZE);
+    assert_eq!(b.len(), SCALAR_SIZE);
     b[51] = (b[51] & 63) | 32;
     b[0] = b[0] & 248;
 }

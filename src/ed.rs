@@ -568,6 +568,8 @@ impl<'a, 'b> Mul<&'a ProtKey8> for &'b GroupElem {
     type Output = ProtBuf8;
 
     /// Multiply point `self` with scalar value `other`.
+    /// Note: the same allocator provided for `self` is used to allocate
+    /// the result.
     fn mul(self, other: &ProtKey8) -> ProtBuf8 {
         self.scalar_mult(&other.read()).pack()
     }

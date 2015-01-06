@@ -383,7 +383,7 @@ mod tests {
         let s2 = &aaa2 - &a;
 
         assert!((&s1 - &s1).is_zero());
-        assert!(s1 == s2);
+        assert_eq!(s1, s2);
         assert!(s1 != aaa2);
     }
 
@@ -401,7 +401,7 @@ mod tests {
         let s2 = &aaa2 - &a;
 
         assert!((&s1 - &s1).is_zero());
-        assert!(s1 == s2);
+        assert_eq!(s1, s2);
     }
 
     #[test]
@@ -418,7 +418,7 @@ mod tests {
         let s2 = &aaa2 - &a;
 
         assert!((&s1 - &s1).is_zero());
-        assert!(s1 == s2);
+        assert_eq!(s1, s2);
     }
 
     #[test]
@@ -445,7 +445,7 @@ mod tests {
         let apa = &a + &a;
         let aaa1 = &a * &apa;
         let s = &aaa1 - &a;
-        assert!(s.pack()[] == r[]);
+        assert_eq!(s.pack()[], r[]);
     }
 
     #[test]
@@ -473,7 +473,7 @@ mod tests {
         let apa = &a + &a;
         let aaa1 = &a * &apa;
         let s = &aaa1 - &a;
-        assert!(s.pack()[] == r[]);
+        assert_eq!(s.pack()[], r[]);
     }
 
     #[test]
@@ -506,7 +506,7 @@ mod tests {
         let apa = &a + &a;
         let aaa1 = &a * &apa;
         let s = &aaa1 - &a;
-        assert!(s.pack()[] == r[]);
+        assert_eq!(s.pack()[], r[]);
     }
 
     #[test]
@@ -531,7 +531,7 @@ mod tests {
             0x87, 0xb0, 0xdd, 0x07];
 
         let s = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
-        assert!(s.pack()[] == r[]);
+        assert_eq!(s.pack()[], r[]);
     }
 
     #[test]
@@ -561,7 +561,7 @@ mod tests {
             0xb1, 0x3a, 0xee, 0x00];
 
         let s = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
-        assert!(s.pack()[] == r[]);
+        assert_eq!(s.pack()[], r[]);
     }
 
     #[test]
@@ -578,6 +578,6 @@ mod tests {
 
         let s1 = ScalarElem::unpack(&b.as_slice()).unwrap();
         let s2 = FromPrimitive::from_u64(n).unwrap();
-        assert!(s1 == s2);
+        assert_eq!(s1, s2);
     }
 }

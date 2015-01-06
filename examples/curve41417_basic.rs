@@ -13,5 +13,5 @@ fn main() {
     let shared1 = scalar_mult(&sk1.read(), &pk2);
     let shared2 = scalar_mult(&sk2.read(), &pk1);
 
-    assert!(shared1 == shared2);
+    assert_eq!(shared1, shared2);
 }

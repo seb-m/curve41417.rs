@@ -29,7 +29,7 @@ fn main () {
     // the same point but in different representations. We can check that,
     // simply by converting `pke` to its Montgomery's representation.
     let pke_m = pke.to_mont();
-    assert!(pkm == pke_m);
+    assert_eq!(pkm, pke_m);
 
     // Some protocols need to perform basic operations directly on scalar
     // values modulo the base point's order. The `sc` module provides just
@@ -45,5 +45,5 @@ fn main () {
     let sk42 = sc_sk42.pack();
     let sh1 = GroupElem::base().scalar_mult(&sk42);
     let sh2 = pke.scalar_mult(&sc_42.pack());
-    assert!(sh1 == sh2);
+    assert_eq!(sh1, sh2);
 }

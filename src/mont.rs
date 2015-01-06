@@ -133,7 +133,7 @@ mod tests {
         let ssk1w = mont::scalar_mult(&sk1.read(), &pk2);
         let ssk2w = mont::scalar_mult(&sk2.read(), &pk1);
 
-        assert!(ssk1w[] == ssk2w[]);
+        assert_eq!(ssk1w[], ssk2w[]);
     }
 
     #[test]
@@ -156,7 +156,7 @@ mod tests {
             0x84, 0xb8, 0xd7, 0x1c];
 
         let rr = mont::scalar_mult_base(&n.as_slice());
-        assert!(r[] == rr[]);
+        assert_eq!(r[], rr[]);
     }
 
     #[bench]

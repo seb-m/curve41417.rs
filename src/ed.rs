@@ -629,8 +629,8 @@ mod tests {
         let ssk2 = &pk1 * &sk2;
         let ssk3 = &pk1 * &sk2.read();
 
-        assert!(ssk1.pack() == ssk2);
-        assert!(ssk1 == ssk3);
+        assert_eq!(ssk1.pack(), ssk2);
+        assert_eq!(ssk1, ssk3);
     }
 
     #[test]
@@ -660,7 +660,7 @@ mod tests {
         scn.clamp_41417();
         let q = &bp * &scn;
 
-        assert!(q.pack() == scr);
+        assert_eq!(q.pack(), scr);
     }
 
     #[test]
@@ -675,7 +675,7 @@ mod tests {
             b = &b - &nb;
         }
 
-        assert!(GroupElem::base() == b);
+        assert_eq!(GroupElem::base(), b);
     }
 
     #[test]
@@ -692,10 +692,10 @@ mod tests {
         for _ in range(0u, 7) {
             s = &s + &q;
         }
-        assert!(s == r);
+        assert_eq!(s, r);
 
         s = &q * &cofactor;
-        assert!(s == r);
+        assert_eq!(s, r);
     }
 
     #[test]
@@ -715,10 +715,10 @@ mod tests {
         let uq = GroupElem::unpack(&qs).unwrap();
 
         let uys = uq.y.pack();
-        assert!(ys == uys);
+        assert_eq!(ys, uys);
 
         let uxs = uq.x.pack();
-        assert!(xs == uxs);
+        assert_eq!(xs, uxs);
     }
 
     #[test]
@@ -731,7 +731,7 @@ mod tests {
         let e1 = &bp * &b1;
         let m11 = e1.to_mont();
 
-        assert!(m1 == m11);
+        assert_eq!(m1, m11);
     }
 
     #[test]
@@ -765,11 +765,11 @@ mod tests {
 
         let p =
             GroupElem::elligator_from_representation(&n.as_slice()).unwrap();
-        assert!(x.as_slice() == p.x.pack().as_slice());
-        assert!(y.as_slice() == p.y.pack().as_slice());
+        assert_eq!(x.as_slice(), p.x.pack().as_slice());
+        assert_eq!(y.as_slice(), p.y.pack().as_slice());
 
         let n2 = p.elligator_to_representation().unwrap();
-        assert!(n.as_slice() == n2.as_slice());
+        assert_eq!(n.as_slice(), n2.as_slice());
     }
 
     #[test]
@@ -821,8 +821,8 @@ mod tests {
             0xe8, 0x83, 0xe9, 0x22];
 
         let p = GroupElem::elligator_from_bytes(&n.as_slice()).unwrap();
-        assert!(x.as_slice() == p.x.pack().as_slice());
-        assert!(y.as_slice() == p.y.pack().as_slice());
+        assert_eq!(x.as_slice(), p.x.pack().as_slice());
+        assert_eq!(y.as_slice(), p.y.pack().as_slice());
 
         let r = p.elligator_to_representation().unwrap();
         assert!(r.as_slice() == r1.as_slice() ||
@@ -835,7 +835,7 @@ mod tests {
         let p1 = GroupElem::elligator_from_bytes(&b).unwrap();
         let r = p1.elligator_to_representation().unwrap();
         let p2 = GroupElem::elligator_from_representation(&r).unwrap();
-        assert!(p1 == p2);
+        assert_eq!(p1, p2);
     }
 
     #[test]
@@ -853,7 +853,7 @@ mod tests {
             }
         }
         let p2 = GroupElem::elligator_from_representation(&e).unwrap();
-        assert!(p1 == p2);
+        assert_eq!(p1, p2);
     }
 
     #[bench]

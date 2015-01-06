@@ -30,7 +30,7 @@ let pk2 = scalar_mult_base(&sk2.read());
 let shared1 = scalar_mult(&sk1.read(), &pk2);
 let shared2 = scalar_mult(&sk2.read(), &pk1);
 
-assert!(shared1 == shared2);
+assert_eq!(shared1, shared2);
 ```
 
 For another example see [curve41417_ops.rs](examples/curve41417_ops.rs).

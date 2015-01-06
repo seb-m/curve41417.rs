@@ -3,7 +3,7 @@ use std::default::Default;
 use std::fmt::{Show, Formatter, Result};
 use std::ops::{Add, Sub, Neg, Mul};
 
-use tars::{ProtBuf, ProtKey, ProtBuf8, ProtKey8};
+use tars::{ProtBuf, ProtBuf8, ProtKey8};
 
 use common::{SCALAR_SIZE, Scalar};
 use fe::FieldElem;
@@ -564,23 +564,12 @@ impl<'a, 'b, T> Mul<&'a T> for &'b GroupElem where T: AsSlice<u8> {
     }
 }
 
-impl<'a, 'b> Mul<&'a GroupElem> for &'b ProtBuf8 {
+impl<'a, 'b> Mul<&'a ProtKey8> for &'b GroupElem {
     type Output = ProtBuf8;
 
-    /// Multiply scalar `self` with point `other` and return a packed point.
-    /// Note: the same allocator is used for both operands and for the
-    /// packed result.
-    fn mul(self, other: &GroupElem) -> ProtBuf8 {
-        other.scalar_mult(self).pack()
-    }
-}
-
-impl<'a, 'b> Mul<&'a GroupElem> for &'b ProtKey8 {
-    type Output = ProtKey8;
-
-    /// Multiply scalar `self` with point `other` and return a packed point.
-    fn mul(self, other: &GroupElem) -> ProtKey8 {
-        ProtKey::from_buf(other.scalar_mult(&self.read()).pack())
+    /// Multiply point `self` with scalar value `other`.
+    fn mul(self, other: &ProtKey8) -> ProtBuf8 {
+        self.scalar_mult(&other.read()).pack()
     }
 }
 
@@ -622,7 +611,7 @@ impl Eq for GroupElem {
 mod tests {
     use test::Bencher;
 
-    use tars::{ProtBuf, ProtKey, ProtBuf8};
+    use tars::{ProtBuf, ProtBuf8};
 
     use common::{SCALAR_SIZE, Scalar};
     use ed::GroupElem;
@@ -637,10 +626,10 @@ mod tests {
         let pk2 = GroupElem::scalar_mult_base(&sk2.read());
 
         let ssk1 = &pk2 * &sk1.read();
-        let ssk2 = &sk2 * &pk1;
+        let ssk2 = &pk1 * &sk2;
         let ssk3 = &pk1 * &sk2.read();
 
-        assert!(ProtKey::from_buf(ssk1.pack()) == ssk2);
+        assert!(ssk1.pack() == ssk2);
         assert!(ssk1 == ssk3);
     }
 

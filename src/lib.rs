@@ -10,15 +10,10 @@
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/")]
 
-#![feature(macro_rules)]
-#![feature(default_type_params)]
 #![feature(slicing_syntax)]
-#![feature(phase)]
-#![feature(old_orphan_check)]
-#![feature(associated_types)]
 
 #[cfg(test)] extern crate test;
-#[cfg(test)] #[phase(plugin, link)] extern crate log;
+#[cfg(test)] #[macro_use] extern crate log;
 
 extern crate tars;
 

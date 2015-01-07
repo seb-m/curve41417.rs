@@ -182,7 +182,7 @@ impl ScalarElem {
         }
 
         let mut r = ScalarElem::new_zero();
-        r.reduce_weak(t[]);
+        r.reduce_weak(t.as_slice());
         r
     }
 
@@ -204,12 +204,10 @@ impl ScalarElem {
     pub fn is_zero(&self) -> bool {
         *self == ScalarElem::zero()
     }
-}
 
-impl<T: AsSlice<u8>> ScalarElem {
     /// Unpack scalar value `n`. It must represent a value strictly in
     /// `[0, L-1]` and it should not be expected to be reduced on unpacking.
-    pub fn unpack(n: &T) -> Option<ScalarElem> {
+    pub fn unpack<T: AsSlice<u8>>(n: &T) -> Option<ScalarElem> {
         let nb = n.as_slice();
         match nb.len() {
             BYTES_SIZE => Some(ScalarElem::unpack_wo_reduce(nb)),
@@ -221,7 +219,7 @@ impl<T: AsSlice<u8>> ScalarElem {
     /// to be of a large enough size in order to provide a good uniformity
     /// of distribution on reductions `mod L`. Thus `b` must be between
     /// `[64, 104]` bytes.
-    pub fn unpack_from_bytes(b: &T) -> Option<ScalarElem> {
+    pub fn unpack_from_bytes<T: AsSlice<u8>>(b: &T) -> Option<ScalarElem> {
         let nb = b.as_slice();
         match nb.len() {
             64...104 => Some(ScalarElem::unpack_w_reduce(nb)),
@@ -232,7 +230,7 @@ impl<T: AsSlice<u8>> ScalarElem {
     /// Unpack bytes `b` as a scalar, reduce it `mod L` and return the
     /// packed reduced result. See `unpack_from_bytes()` for more details
     /// on performed unpacking.
-    pub fn reduce_from_bytes(b: &T) -> ProtBuf8 {
+    pub fn reduce_from_bytes<T: AsSlice<u8>>(b: &T) -> ProtBuf8 {
         ScalarElem::unpack_from_bytes(b).unwrap().pack()
     }
 }
@@ -310,7 +308,7 @@ impl<'a, 'b> Mul<&'a ScalarElem> for &'b ScalarElem {
         }
 
         let mut r = ScalarElem::new_zero();
-        r.reduce_weak(t[]);
+        r.reduce_weak(t.as_slice());
         r
     }
 }
@@ -445,7 +443,7 @@ mod tests {
         let apa = &a + &a;
         let aaa1 = &a * &apa;
         let s = &aaa1 - &a;
-        assert_eq!(s.pack()[], r[]);
+        assert_eq!(s.pack().as_slice(), r.as_slice());
     }
 
     #[test]
@@ -473,7 +471,7 @@ mod tests {
         let apa = &a + &a;
         let aaa1 = &a * &apa;
         let s = &aaa1 - &a;
-        assert_eq!(s.pack()[], r[]);
+        assert_eq!(s.pack().as_slice(), r.as_slice());
     }
 
     #[test]
@@ -506,7 +504,7 @@ mod tests {
         let apa = &a + &a;
         let aaa1 = &a * &apa;
         let s = &aaa1 - &a;
-        assert_eq!(s.pack()[], r[]);
+        assert_eq!(s.pack().as_slice(), r.as_slice());
     }
 
     #[test]
@@ -531,7 +529,7 @@ mod tests {
             0x87, 0xb0, 0xdd, 0x07];
 
         let s = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
-        assert_eq!(s.pack()[], r[]);
+        assert_eq!(s.pack().as_slice(), r.as_slice());
     }
 
     #[test]
@@ -561,7 +559,7 @@ mod tests {
             0xb1, 0x3a, 0xee, 0x00];
 
         let s = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
-        assert_eq!(s.pack()[], r[]);
+        assert_eq!(s.pack().as_slice(), r.as_slice());
     }
 
     #[test]

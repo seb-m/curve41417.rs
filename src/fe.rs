@@ -35,7 +35,7 @@ impl FieldElem {
 
     pub fn one() -> FieldElem {
         FieldElem {
-            elem: ProtBuf::from_slice(ONE[])
+            elem: ProtBuf::from_slice(ONE.as_slice())
         }
     }
 

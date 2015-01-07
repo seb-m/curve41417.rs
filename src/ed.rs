@@ -380,13 +380,11 @@ impl GroupElem {
         p.propagate_from_xy();
         Some(p)
     }
-}
 
-impl<T: AsSlice<u8>> GroupElem {
     /// Unpack a Curve41417 point in Edwards representation from its
     /// `bytes` representation. `bytes` must hold a point packed obtained
     /// from a previous call to `pack()`.
-    pub fn unpack(bytes: &T) -> Option<GroupElem> {
+    pub fn unpack<T: AsSlice<u8>>(bytes: &T) -> Option<GroupElem> {
         let mut r: GroupElem = GroupElem::new();
 
         // Unpack y, top 2 bits are discarded in FieldElem::unpack().
@@ -430,7 +428,7 @@ impl<T: AsSlice<u8>> GroupElem {
     /// applied to the base point `BP`. Note that `n` is not clamped by this
     /// method before the multiplication is performed. Calling this method is
     /// equivalent to calling `GroupElem::base().scalar_mult(&n)`.
-    pub fn scalar_mult_base(n: &T) -> GroupElem {
+    pub fn scalar_mult_base<T: AsSlice<u8>>(n: &T) -> GroupElem {
         GroupElem::base().scalar_mult(n)
     }
 
@@ -438,8 +436,9 @@ impl<T: AsSlice<u8>> GroupElem {
     /// scalar values and `p1` and `p2` are group elements. Note that the
     /// values of `n1` and `n2` are not clamped by this method before their
     /// respective multiplications.
-    pub fn double_scalar_mult(n1: &T, p1: &GroupElem,
-                              n2: &T, p2: &GroupElem) -> GroupElem {
+    pub fn double_scalar_mult<T: AsSlice<u8>>(n1: &T, p1: &GroupElem,
+                                              n2: &T, p2: &GroupElem)
+                                              -> GroupElem {
         &p1.scalar_mult(n1) + &p2.scalar_mult(n2)
     }
 
@@ -455,7 +454,7 @@ impl<T: AsSlice<u8>> GroupElem {
     /// want the bits of the scalar to be modified before any scalar
     /// multiplication. Whereas a `ScalarElem` would automatically be reduced
     /// `mod L` (see `base()`) before any scalar multiplication takes place.
-    pub fn scalar_mult(&self, n: &T) -> GroupElem {
+    pub fn scalar_mult<T: AsSlice<u8>>(&self, n: &T) -> GroupElem {
         let mut p = self.clone();
         let mut q: GroupElem = GroupElem::neutral();
         let nb = n.as_slice();
@@ -477,7 +476,8 @@ impl<T: AsSlice<u8>> GroupElem {
     /// the encoded representation returned by
     /// `elligator_to_representation()`. Otherwise use `elligator_from_bytes()`
     /// instead.
-    pub fn elligator_from_representation(r: &T) -> Option<GroupElem> {
+    pub fn elligator_from_representation<T: AsSlice<u8>>(r: &T)
+                                                         -> Option<GroupElem> {
         match FieldElem::unpack(r.as_slice()) {
             Some(ref fe) => GroupElem::elligator_from_fe(fe),
             None => None
@@ -494,7 +494,7 @@ impl<T: AsSlice<u8>> GroupElem {
     /// `r = s mod q`, as `r` and `-r` map to the same point, it may lead
     /// to obtain a non unique result for
     /// `elligator_to_representation(elligator_from_bytes(s))` in `{r, -r}`.
-    pub fn elligator_from_bytes(s: &T) -> Option<GroupElem> {
+    pub fn elligator_from_bytes<T: AsSlice<u8>>(s: &T) -> Option<GroupElem> {
         if s.as_slice().len() < 64 {
             return None;
         }

@@ -10,8 +10,6 @@
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/")]
 
-#![feature(slicing_syntax)]
-
 #[cfg(test)] extern crate test;
 #[cfg(test)] #[macro_use] extern crate log;
 

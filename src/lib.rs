@@ -11,8 +11,7 @@
        html_root_url = "http://doc.rust-lang.org/")]
 
 // FIXME: temp
-#![allow(staged_experimental)]
-#![allow(staged_unstable)]
+#![allow(unstable)]
 
 #[cfg(test)] extern crate test;
 #[cfg(test)] #[macro_use] extern crate log;

@@ -7,9 +7,9 @@ use tars::ProtBuf8;
 
 
 /// Size of Curve41417's scalar value
-pub const SCALAR_SIZE: uint = 52;
+pub const SCALAR_SIZE: usize = 52;
 /// Size of Curve41417's packed element
-pub const BYTES_SIZE: uint = 52;
+pub const BYTES_SIZE: usize = 52;
 
 
 /// Trait to augment data buffers for scalar values
@@ -38,7 +38,7 @@ fn clamp_buf(b: &mut [u8]) {
 /// `u64` to `bytes` little-endian encoding.
 pub fn u64to8_le(buf: &mut [u8], val: &u64) {
     assert!(buf.len() >= 8);
-    for i in range(0u, 8) {
+    for i in range(0us, 8) {
         buf[i] = (*val >> (8 * i)) as u8;
     }
 }
@@ -52,7 +52,7 @@ pub fn bytes_cswap<T: SignedInt>(cond: T, x: &mut [T], y: &mut [T]) {
     assert_eq!(x.len(), y.len());
 
     let c: T = !(cond - Int::one());
-    for i in range(0u, x.len()) {
+    for i in range(0us, x.len()) {
         let t = c & (x[i] ^ y[i]);
         x[i] = x[i] ^ t;
         y[i] = y[i] ^ t;

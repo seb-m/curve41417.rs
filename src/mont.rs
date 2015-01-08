@@ -157,7 +157,6 @@ mod tests {
             0x84, 0xb8, 0xd7, 0x1c];
 
         let rr = mont::scalar_mult_base(&n.as_slice());
-        assert!(r.as_slice() == rr.as_slice());
         assert_eq!(r.as_slice(), rr.as_slice());
     }
 

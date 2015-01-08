@@ -9,5 +9,8 @@ authors = ["Sebastien Martini <seb@dbzteam.org>"]
 [lib]
 name = "curve41417"
 
+[features]
+no_mlock = ["tars/no_mlock"]
+
 [dependencies.tars]
 git = "https://github.com/seb-m/tars"

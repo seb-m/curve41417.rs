@@ -261,9 +261,9 @@ impl GroupElem {
         }
     }
 
-    /// Convert this point in Edwards coordinates to Montgomery's
-    /// x-coordinate. This result may be used as input point in
-    /// `curve41417::mont` scalar multiplications.
+    /// Convert and pack this point from Edwards coordinates to
+    /// Montgomery's x-coordinate. This result may be used as input
+    /// point in `curve41417::mont` scalar multiplications.
     pub fn pack_to_mont(&self) -> ProtBuf8 {
         let zi = self.z.inv();
         let ty = &self.y * &zi;
@@ -274,6 +274,44 @@ impl GroupElem {
         den = den.inv();
         num = &num * &den;
         num.pack()
+    }
+
+    /// Unpack point from packed Montgomery's x-coordinate along with a
+    /// sign bit originally obtained from the method `sign_bit()`. This
+    /// unpacking may be used in a similar case than
+    /// [this](https://moderncrypto.org/mail-archive/curves/2014/000293.html).
+    pub fn unpack_from_mont<T: AsSlice<u8>>(bytes: &T, sign_bit: u8)
+                                            -> Option<GroupElem> {
+        if sign_bit & 254 != 0 {
+            return None;
+        }
+
+        let u = match FieldElem::unpack(bytes.as_slice()) {
+            Some(u) => u,
+            None => return None
+        };
+
+        // y = (u - 1) / (u + 1)
+        let mut num = &u - &FieldElem::one();
+        let mut den = &u + &FieldElem::one();
+        den = den.inv();
+        num = &num * &den;
+
+        // Insert sign bit
+        let mut edb = num.pack();
+        edb[51] = edb[51] ^ (sign_bit << 7);
+
+        GroupElem::unpack(&edb)
+    }
+
+    /// Return the sign bit, a value equal to zero or one exclusively,
+    /// associated with the packed representation of this point. This
+    /// returned value may then be used as argument when calling
+    /// `unpack_from_mont()`.
+    pub fn sign_bit(&self) -> u8 {
+        let zi = self.z.inv();
+        let tx = &self.x * &zi;
+        tx.parity_bit()
     }
 
     /// Return a point `q` such that `q=n.BP` where `n` is a scalar value
@@ -723,16 +761,24 @@ mod tests {
     }
 
     #[test]
-    fn test_ed_to_mont() {
+    fn test_ed_mont() {
+        let mut s1: ProtBuf8 = ProtBuf::new_rand_os(SCALAR_SIZE);
+        s1.clamp_41417();
+        let m1 = mont::scalar_mult_base(&s1);
         let bp = GroupElem::base();
-        let mut b1: ProtBuf8 = ProtBuf::new_rand_os(SCALAR_SIZE);
-        b1.clamp_41417();
+        let e1 = &bp * &s1;
 
-        let m1 = mont::scalar_mult_base(&b1);
-        let e1 = &bp * &b1;
-        let m11 = e1.pack_to_mont();
+        let sign_bit = e1.sign_bit();
+        let e2 = GroupElem::unpack_from_mont(&m1, sign_bit).unwrap();
+        let p1 = e1.pack();
+        let p2 = e2.pack();
+        assert_eq!(e1, e2);
+        assert_eq!(p1, p2);
 
-        assert_eq!(m1, m11);
+        let m2 = e1.pack_to_mont();
+        let m3 = e2.pack_to_mont();
+        assert_eq!(m1, m2);
+        assert_eq!(m1, m3);
     }
 
     #[test]

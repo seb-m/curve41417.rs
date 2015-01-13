@@ -28,7 +28,7 @@ fn main () {
     // Moreover, at this point `pkm` and `pke` are expected to represent
     // the same point but in different representations. We can check that,
     // simply by converting `pke` to its Montgomery's representation.
-    let pke_m = pke.to_mont();
+    let pke_m = pke.pack_to_mont();
     assert_eq!(pkm, pke_m);
 
     // Some protocols need to perform basic operations directly on scalar

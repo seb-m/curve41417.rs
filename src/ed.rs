@@ -182,6 +182,18 @@ impl GroupElem {
         FieldElem::unpack(&MONTB1).unwrap()
     }
 
+    // Propagate changes made in `x` and `y` to `z` and `t`.
+    fn propagate_from_xy(&mut self) {
+        self.z = FieldElem::one();
+        self.t = &self.x * &self.y;
+    }
+
+    fn cswap(&mut self, cond: i64, other: &mut GroupElem) {
+        self.x.cswap(cond, &mut other.x);
+        self.y.cswap(cond, &mut other.y);
+        self.z.cswap(cond, &mut other.z);
+        self.t.cswap(cond, &mut other.t);
+    }
 
     /// Generate a new secret key at random. It is clamped before being
     /// returned.
@@ -189,12 +201,6 @@ impl GroupElem {
         let mut sk = ProtBuf::new_rand_os(SCALAR_SIZE);
         sk.clamp_41417();
         sk.into_key()
-    }
-
-    // Propagate changes made in `x` and `y` to `z` and `t`.
-    fn propagate_from_xy(&mut self) {
-        self.z = FieldElem::one();
-        self.t = &self.x * &self.y;
     }
 
     /// Pack a group elem's coordinate `y` along with a sign bit taken from
@@ -212,26 +218,53 @@ impl GroupElem {
         r
     }
 
-    fn cswap(&mut self, cond: i64, other: &mut GroupElem) {
-        self.x.cswap(cond, &mut other.x);
-        self.y.cswap(cond, &mut other.y);
-        self.z.cswap(cond, &mut other.z);
-        self.t.cswap(cond, &mut other.t);
-    }
+    /// Unpack a Curve41417 point in Edwards representation from its
+    /// `bytes` representation. `bytes` must hold a point packed obtained
+    /// from a previous call to `pack()`.
+    pub fn unpack<T: AsSlice<u8>>(bytes: &T) -> Option<GroupElem> {
+        let mut r: GroupElem = GroupElem::new();
 
-    /// Return a point `q` such that `q=8.self` where `8` is curve's cofactor
-    /// applied to this point's instance.
-    pub fn scalar_mult_cofactor(&self) -> GroupElem {
-        let mut q = self + self;
-        q = &q + &q;
-        q = &q + &q;
-        q
+        // Unpack y, top 2 bits are discarded in FieldElem::unpack().
+        r.y = match FieldElem::unpack(bytes.as_slice()) {
+            Some(y) => y,
+            None => return None
+        };
+
+        // x = +/- (u/v)^((P+1)/4) = uv(uv^3)^((P-3)/4)
+        // with u = 1-y^2, v = 1-dy^2
+        let mut num = r.y.square();
+        let mut den = &num * &GroupElem::edd();
+        num = &FieldElem::one() - &num;
+        den = &FieldElem::one() - &den;
+
+        let mut t = den.square();
+        t = &t * &den;
+        t = &num * &t;
+        t = t.pow4125();
+        t = &t * &num;
+        r.x = &t * &den;
+
+        // Check valid sqrt
+        let mut chk = r.x.square();
+        chk = &chk * &den;
+        let success = chk == num;
+
+        // Choose between x and -x
+        let mut nrx = -&r.x;
+        let parity = r.x.parity_bit();
+        r.x.cswap(((bytes.as_slice()[51] >> 7) ^ parity) as i64, &mut nrx);
+        r.propagate_from_xy();
+
+        match success {
+            true => Some(r),
+            false => None
+        }
     }
 
     /// Convert this point in Edwards coordinates to Montgomery's
     /// x-coordinate. This result may be used as input point in
     /// `curve41417::mont` scalar multiplications.
-    pub fn to_mont(&self) -> ProtBuf8 {
+    pub fn pack_to_mont(&self) -> ProtBuf8 {
         let zi = self.z.inv();
         let ty = &self.y * &zi;
 
@@ -241,6 +274,60 @@ impl GroupElem {
         den = den.inv();
         num = &num * &den;
         num.pack()
+    }
+
+    /// Return a point `q` such that `q=n.BP` where `n` is a scalar value
+    /// applied to the base point `BP`. Note that `n` is not clamped by this
+    /// method before the multiplication is performed. Calling this method is
+    /// equivalent to calling `GroupElem::base().scalar_mult(&n)`.
+    pub fn scalar_mult_base<T: AsSlice<u8>>(n: &T) -> GroupElem {
+        GroupElem::base().scalar_mult(n)
+    }
+
+    /// Return a point `q` such that `q=n1.p1+n2.p2` where `n1` and `n2` are
+    /// scalar values and `p1` and `p2` are group elements. Note that the
+    /// values of `n1` and `n2` are not clamped by this method before their
+    /// respective multiplications.
+    pub fn double_scalar_mult<T: AsSlice<u8>>(n1: &T, p1: &GroupElem,
+                                              n2: &T, p2: &GroupElem)
+                                              -> GroupElem {
+        &p1.scalar_mult(n1) + &p2.scalar_mult(n2)
+    }
+
+    /// Return a point `q` such that `q=n.self` where `n` is the scalar
+    /// value applied to the point `self`. Note that the value of `n` is
+    /// not clamped by this method before the scalar multiplication is
+    /// performed. Especially no cofactor multiplication is implicitly
+    /// applied. Use `scalar_mult_cofactor()` prior to calling this method
+    /// to explictly pre-cofactor this point.
+    ///
+    /// This method deliberately takes as input parameter a raw scalar
+    /// instead of a `ScalarElem` for the reason that in some cases we don't
+    /// want the bits of the scalar to be modified before any scalar
+    /// multiplication. Whereas a `ScalarElem` would automatically be reduced
+    /// `mod L` (see `base()`) before any scalar multiplication takes place.
+    pub fn scalar_mult<T: AsSlice<u8>>(&self, n: &T) -> GroupElem {
+        let mut p = self.clone();
+        let mut q: GroupElem = GroupElem::neutral();
+        let nb = n.as_slice();
+
+        for i in range(0us, 415).rev() {
+            let c = ((nb[i / 8] >> (i & 7)) & 1) as i64;
+            q.cswap(c, &mut p);
+            p = &p + &q;
+            q = &q + &q;
+            q.cswap(c, &mut p);
+        }
+        q
+    }
+
+    /// Return a point `q` such that `q=8.self` where `8` is curve's cofactor
+    /// applied to this point's instance.
+    pub fn scalar_mult_cofactor(&self) -> GroupElem {
+        let mut q = self + self;
+        q = &q + &q;
+        q = &q + &q;
+        q
     }
 
     /// Use [Elligator](http://elligator.cr.yp.to/) to encode a curve
@@ -379,94 +466,6 @@ impl GroupElem {
 
         p.propagate_from_xy();
         Some(p)
-    }
-
-    /// Unpack a Curve41417 point in Edwards representation from its
-    /// `bytes` representation. `bytes` must hold a point packed obtained
-    /// from a previous call to `pack()`.
-    pub fn unpack<T: AsSlice<u8>>(bytes: &T) -> Option<GroupElem> {
-        let mut r: GroupElem = GroupElem::new();
-
-        // Unpack y, top 2 bits are discarded in FieldElem::unpack().
-        r.y = match FieldElem::unpack(bytes.as_slice()) {
-            Some(y) => y,
-            None => return None
-        };
-
-        // x = +/- (u/v)^((P+1)/4) = uv(uv^3)^((P-3)/4)
-        // with u = 1-y^2, v = 1-dy^2
-        let mut num = r.y.square();
-        let mut den = &num * &GroupElem::edd();
-        num = &FieldElem::one() - &num;
-        den = &FieldElem::one() - &den;
-
-        let mut t = den.square();
-        t = &t * &den;
-        t = &num * &t;
-        t = t.pow4125();
-        t = &t * &num;
-        r.x = &t * &den;
-
-        // Check valid sqrt
-        let mut chk = r.x.square();
-        chk = &chk * &den;
-        let success = chk == num;
-
-        // Choose between x and -x
-        let mut nrx = -&r.x;
-        let parity = r.x.parity_bit();
-        r.x.cswap(((bytes.as_slice()[51] >> 7) ^ parity) as i64, &mut nrx);
-        r.propagate_from_xy();
-
-        match success {
-            true => Some(r),
-            false => None
-        }
-    }
-
-    /// Return a point `q` such that `q=n.BP` where `n` is a scalar value
-    /// applied to the base point `BP`. Note that `n` is not clamped by this
-    /// method before the multiplication is performed. Calling this method is
-    /// equivalent to calling `GroupElem::base().scalar_mult(&n)`.
-    pub fn scalar_mult_base<T: AsSlice<u8>>(n: &T) -> GroupElem {
-        GroupElem::base().scalar_mult(n)
-    }
-
-    /// Return a point `q` such that `q=n1.p1+n2.p2` where `n1` and `n2` are
-    /// scalar values and `p1` and `p2` are group elements. Note that the
-    /// values of `n1` and `n2` are not clamped by this method before their
-    /// respective multiplications.
-    pub fn double_scalar_mult<T: AsSlice<u8>>(n1: &T, p1: &GroupElem,
-                                              n2: &T, p2: &GroupElem)
-                                              -> GroupElem {
-        &p1.scalar_mult(n1) + &p2.scalar_mult(n2)
-    }
-
-    /// Return a point `q` such that `q=n.self` where `n` is the scalar
-    /// value applied to the point `self`. Note that the value of `n` is
-    /// not clamped by this method before the scalar multiplication is
-    /// performed. Especially no cofactor multiplication is implicitly
-    /// applied. Use `scalar_mult_cofactor()` prior to calling this method
-    /// to explictly pre-cofactor this point.
-    ///
-    /// This method deliberately takes as input parameter a raw scalar
-    /// instead of a `ScalarElem` for the reason that in some cases we don't
-    /// want the bits of the scalar to be modified before any scalar
-    /// multiplication. Whereas a `ScalarElem` would automatically be reduced
-    /// `mod L` (see `base()`) before any scalar multiplication takes place.
-    pub fn scalar_mult<T: AsSlice<u8>>(&self, n: &T) -> GroupElem {
-        let mut p = self.clone();
-        let mut q: GroupElem = GroupElem::neutral();
-        let nb = n.as_slice();
-
-        for i in range(0us, 415).rev() {
-            let c = ((nb[i / 8] >> (i & 7)) & 1) as i64;
-            q.cswap(c, &mut p);
-            p = &p + &q;
-            q = &q + &q;
-            q.cswap(c, &mut p);
-        }
-        q
     }
 
     /// Map a byte-string representation to a curve point. Return a valid
@@ -731,7 +730,7 @@ mod tests {
 
         let m1 = mont::scalar_mult_base(&b1);
         let e1 = &bp * &b1;
-        let m11 = e1.to_mont();
+        let m11 = e1.pack_to_mont();
 
         assert_eq!(m1, m11);
     }

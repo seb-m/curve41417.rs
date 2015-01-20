@@ -279,7 +279,10 @@ impl GroupElem {
     /// Unpack point from packed Montgomery's x-coordinate along with a
     /// sign bit originally obtained from the method `sign_bit()`. This
     /// unpacking may be used in a similar case than
-    /// [this](https://moderncrypto.org/mail-archive/curves/2014/000293.html).
+    /// [this](https://moderncrypto.org/mail-archive/curves/2014/000293.html),
+    /// see also
+    /// [this](https://moderncrypto.org/mail-archive/curves/2015/000376.html)
+    /// discussion.
     pub fn unpack_from_mont<T: AsSlice<u8>>(bytes: &T, sign_bit: u8)
                                             -> Option<GroupElem> {
         if sign_bit & 254 != 0 {

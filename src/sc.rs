@@ -1,6 +1,6 @@
 //! Curve41417 scalar operations
 use std::default::Default;
-use std::fmt::{Show, Formatter, Result};
+use std::fmt::{self, Debug, Formatter};
 use std::num::FromPrimitive;
 use std::ops::{Add, Sub, Neg, Mul, Index, IndexMut};
 use std::rand::{Rand, Rng};
@@ -343,8 +343,8 @@ impl Rand for ScalarElem {
     }
 }
 
-impl Show for ScalarElem {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl Debug for ScalarElem {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.pack().fmt(f)
     }
 }

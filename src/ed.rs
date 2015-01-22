@@ -1,6 +1,6 @@
 //! Edwards-form Curve41417 representation
 use std::default::Default;
-use std::fmt::{Show, Formatter, Result};
+use std::fmt::{self, Debug, Formatter};
 use std::ops::{Add, Sub, Neg, Mul};
 
 use tars::{ProtBuf, ProtBuf8, ProtKey8};
@@ -633,8 +633,8 @@ impl Default for GroupElem {
     }
 }
 
-impl Show for GroupElem {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl Debug for GroupElem {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.pack().fmt(f)
     }
 }

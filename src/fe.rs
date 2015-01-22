@@ -1,6 +1,6 @@
 //! A Curve41417 field element representation
 use std::default::Default;
-use std::fmt::{Show, Formatter, Result};
+use std::fmt::{self, Debug, Formatter};
 use std::ops::{Add, Sub, Neg, Mul, Index, IndexMut};
 
 use tars::{ProtBuf, ProtBuf8};
@@ -343,8 +343,8 @@ impl Default for FieldElem {
     }
 }
 
-impl Show for FieldElem {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl Debug for FieldElem {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.pack().fmt(f)
     }
 }

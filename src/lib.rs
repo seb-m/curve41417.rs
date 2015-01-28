@@ -5,13 +5,14 @@
 //!
 //! Souce code [repository](https://github.com/seb-m/curve41417.rs) on Github.
 #![crate_name = "curve41417"]
-#![experimental]  // Stability
-#![doc(html_logo_url = "http://www.rust-lang.org/logos/rust-logo-128x128-blk.png",
+#![doc(html_logo_url = "http://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/")]
 
-// FIXME: temp
-#![allow(unstable)]
+#![feature(core)]
+#![feature(rand)]
+#![cfg_attr(test, feature(rustc_private))]
+#![cfg_attr(test, feature(test))]
 
 #[cfg(test)] extern crate test;
 #[cfg(test)] #[macro_use] extern crate log;

@@ -59,7 +59,7 @@ impl FieldElem {
         }
 
         let mut n = FieldElem::new();
-        for i in range(0us, FE_SIZE) {
+        for i in 0us..FE_SIZE {
             n[i] = bytes[2 * i] as i64 + ((bytes[2 * i + 1] as i64) << 8);
         }
         n[25] &= 0x3fff; // mask top 2 bits
@@ -72,7 +72,7 @@ impl FieldElem {
 
         let mut r = ProtBuf::new_zero(BYTES_SIZE);
 
-        for i in range(0us, FE_SIZE) {
+        for i in 0us..FE_SIZE {
             r[2 * i] = (t[i] & 0xff) as u8;
             r[2 * i + 1] = (t[i] >> 8) as u8;
         }
@@ -92,7 +92,7 @@ impl FieldElem {
     pub fn carry(&mut self) {
         let mut c: i64;
 
-        for i in range(0us, self.len()) {
+        for i in 0us..self.len() {
             self[i] += 1_i64 << 16;
             c = self[i] >> 16;
             self[(i + 1) * ((i < 25) as usize)] += c - 1 + 67 * (c - 1) *
@@ -108,9 +108,9 @@ impl FieldElem {
         self.carry();
         let mut m = FieldElem::new();
 
-        for _ in range(0us, 3) {
+        for _ in 0us..3 {
             m[0] = self[0] - 0xffef;
-            for j in range(1us, 25) {
+            for j in 1us..25 {
                 m[j] = self[j] - 0xffff - ((m[j - 1] >> 16) & 1);
                 m[j - 1] &= 0xffff;
             }
@@ -132,10 +132,10 @@ impl FieldElem {
 
         let mut r = FieldElem::new();
 
-        for i in range(0us, FE_SIZE) {
+        for i in 0us..FE_SIZE {
             r[i] = (*n)[2 * i] as i64 + (((*n)[2 * i + 1] as i64) << 8);
         }
-        for i in range(FE_SIZE, n.len() >> 1) {
+        for i in FE_SIZE..n.len() >> 1 {
             r[i - 26] += ((*n)[2 * i] as i64 +
                           (((*n)[2 * i + 1] as i64) << 8)) * 68;
         }
@@ -154,7 +154,7 @@ impl FieldElem {
     pub fn muli(&self, other: i16) -> FieldElem {
         let mut r = self.clone();
 
-        for i in range(0us, r.len()) {
+        for i in 0us..r.len() {
             r[i] *= other as i64;
         }
 
@@ -170,7 +170,7 @@ impl FieldElem {
     pub fn inv(&self) -> FieldElem {
         let mut r = self.clone();
 
-        for i in range(0us, 413).rev() {
+        for i in (0us..413).rev() {
             r = r.square();
             if i != 1 && i != 4 {
                 r = r.mul(self);
@@ -184,7 +184,7 @@ impl FieldElem {
     pub fn pow4139(&self) -> FieldElem {
         let mut r = self.clone();
 
-        for i in range(0us, 412).rev() {
+        for i in (0us..412).rev() {
             r = r.square();
             if i != 3 {
                 r = r.mul(self);
@@ -197,7 +197,7 @@ impl FieldElem {
     pub fn pow4125(&self) -> FieldElem {
         let mut r = self.clone();
 
-        for i in range(0us, 411).rev() {
+        for i in (0us..411).rev() {
             r = r.square();
             if i != 2 {
                 r = r.mul(self);
@@ -211,7 +211,7 @@ impl FieldElem {
     pub fn pow4124(&self) -> FieldElem {
         let mut r = self.clone();
 
-        for i in range(0us, 411).rev() {
+        for i in (0us..411).rev() {
             r = r.square();
             if i != 0 && i != 1 {
                 r = r.mul(self);
@@ -246,7 +246,7 @@ impl IndexMut<usize> for FieldElem {
 }
 
 fn add(a: &mut FieldElem, b: &FieldElem) {
-    for i in range(0us, a.len()) {
+    for i in 0us..a.len() {
         a[i] += b[i];
     }
 }
@@ -272,7 +272,7 @@ impl<'a> Add<&'a FieldElem> for FieldElem {
 }
 
 fn sub(a: &mut FieldElem, b: &FieldElem) {
-    for i in range(0us, a.len()) {
+    for i in 0us..a.len() {
         a[i] -= b[i];
     }
 }
@@ -320,12 +320,12 @@ impl<'a, 'b> Mul<&'a FieldElem> for &'b FieldElem {
         let mut u: i64;
         let mut r = FieldElem::new();
 
-        for i in range(0us, FE_SIZE) {
+        for i in 0us..FE_SIZE {
             u = 0;
-            for j in range(0us, i + 1) {
+            for j in 0us..i + 1 {
                 u += self[j] * other[i - j];
             }
-            for j in range(i + 1, FE_SIZE) {
+            for j in i + 1..FE_SIZE {
                 u += 68 * self[j] * other[i + FE_SIZE - j];
             }
             r[i] = u;

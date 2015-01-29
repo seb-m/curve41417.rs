@@ -94,7 +94,7 @@ impl ScalarElem {
         let top = self.len() - 1;
         let mut carry: i64;
 
-        for i in range(0us, top) {
+        for i in 0us..top {
             self[i] += 1_i64 << 8;
             carry = self[i] >> 8;
             self[i + 1] += carry - 1;
@@ -103,7 +103,7 @@ impl ScalarElem {
 
         self[top] += 1_i64 << 8;
         carry = self[top] >> 8;
-        for i in range(0us, 27) {
+        for i in 0us..27 {
             self[top - 51 + i] += (carry - 1) * (LD[i] as i64);
         }
         self[top] -= carry << 8;
@@ -117,23 +117,23 @@ impl ScalarElem {
         assert!(n.len() <= 104);
 
         let mut t: ProtBuf<i64> = ProtBuf::new_zero(78);
-        for i in range(0us, 52) {
+        for i in 0us..52 {
             t[i] = n[i];
         }
 
-        for i in range(52us, n.len()) {
-            for j in range(0us, 27) {
+        for i in 52us..n.len() {
+            for j in 0us..27 {
                 t[i + j - 52] += n[i] * (LD[j] as i64);
             }
         }
 
-        for i in range(52us, n.len() - 26) {
-            for j in range(0us, 27) {
+        for i in 52us..n.len() - 26 {
+            for j in 0us..27 {
                 t[i + j - 52] += t[i] * (LD[j] as i64);
             }
         }
 
-        for i in range(0us, 52) {
+        for i in 0us..52 {
             self[i] = t[i];
         }
 
@@ -147,7 +147,7 @@ impl ScalarElem {
 
         // Eliminate multiples of 2^411
         let mut carry: i64 = 0;
-        for i in range(0us, 52) {
+        for i in 0us..52 {
             self[i] += carry - (self[51] >> 3) * (L[i] as i64);
             carry = self[i] >> 8;
             self[i] &= 0xff;
@@ -156,7 +156,7 @@ impl ScalarElem {
         // Substract L a last time in case n is in [L, 2^411-1]
         let mut m = ScalarElem::new_zero();
         carry = 0;
-        for i in range(0us, 52) {
+        for i in 0us..52 {
             m[i] = self[i] + carry - (L[i] as i64);
             carry = m[i] >> 8;
             m[i] &= 0xff;
@@ -168,7 +168,7 @@ impl ScalarElem {
         // Note: would be great to also check/assert that n is in [0, L - 1].
         let mut r = ScalarElem::new_zero();
 
-        for i in range(0us, 52) {
+        for i in 0us..52 {
             r[i] = n[i] as i64;
         }
         r
@@ -177,7 +177,7 @@ impl ScalarElem {
     fn unpack_w_reduce(n: &[u8]) -> ScalarElem {
         let mut t: ProtBuf<i64> = ProtBuf::new_zero(n.len());
 
-        for i in range(0us, n.len()) {
+        for i in 0us..n.len() {
             t[i] = n[i] as i64;
         }
 
@@ -194,7 +194,7 @@ impl ScalarElem {
         t.reduce();
 
         let mut b = ProtBuf::new_zero(BYTES_SIZE);
-        for i in range(0us, BYTES_SIZE) {
+        for i in 0us..BYTES_SIZE {
             b[i] = (t[i] & 0xff) as u8;
         }
         b
@@ -265,7 +265,7 @@ impl<'a, 'b> Add<&'a ScalarElem> for &'b ScalarElem {
     /// Add scalars.
     fn add(self, other: &ScalarElem) -> ScalarElem {
         let mut r = self.clone();
-        for i in range(0us, self.len()) {
+        for i in 0us..self.len() {
             r[i] += other[i];
         }
         r
@@ -278,7 +278,7 @@ impl<'a, 'b> Sub<&'a ScalarElem> for &'b ScalarElem {
     /// Substract scalars.
     fn sub(self, other: &ScalarElem) -> ScalarElem {
         let mut r = self.clone();
-        for i in range(0us, self.len()) {
+        for i in 0us..self.len() {
             r[i] -= other[i];
         }
         r
@@ -301,8 +301,8 @@ impl<'a, 'b> Mul<&'a ScalarElem> for &'b ScalarElem {
     fn mul(self, other: &ScalarElem) -> ScalarElem {
         let mut t: ProtBuf<i64> = ProtBuf::new_zero(103);
 
-        for i in range(0us, 52) {
-            for j in range(0us, 52) {
+        for i in 0us..52 {
+            for j in 0us..52 {
                 t[i + j] += self[i] * other[j];
             }
         }

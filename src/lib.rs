@@ -11,6 +11,7 @@
 
 #![feature(core)]
 #![feature(rand)]
+
 #![cfg_attr(test, feature(rustc_private))]
 #![cfg_attr(test, feature(test))]
 

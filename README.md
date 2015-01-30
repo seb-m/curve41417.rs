@@ -1,10 +1,11 @@
 # Curve41417
 
+[![Build Status](https://travis-ci.org/seb-m/curve41417.rs.svg?branch=master)](https://travis-ci.org/seb-m/curve41417.rs)
+
+
 ## Description
 
 A pure-[Rust](http://www.rust-lang.org/) implementation of [Curve41417](http://safecurves.cr.yp.to/). This code is experimental, don't use it for anything real.
-
-[![Build Status](https://travis-ci.org/seb-m/curve41417.rs.svg?branch=master)](https://travis-ci.org/seb-m/curve41417.rs)
 
 
 ## Documentation

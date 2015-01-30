@@ -84,9 +84,7 @@ impl ScalarElem {
     // as condition and must be `0` or `1` strictly. Values are swapped iff
     // `cond == 1`.
     fn cswap(&mut self, cond: i64, other: &mut ScalarElem) {
-        common::bytes_cswap::<i64>(cond,
-                                   self.elem.as_mut_slice(),
-                                   other.elem.as_mut_slice());
+        common::bytes_cswap::<i64>(cond, &mut self.elem, &mut other.elem);
     }
 
     // Requirements: len >= 52
@@ -182,7 +180,7 @@ impl ScalarElem {
         }
 
         let mut r = ScalarElem::new_zero();
-        r.reduce_weak(t.as_slice());
+        r.reduce_weak(&t);
         r
     }
 
@@ -308,7 +306,7 @@ impl<'a, 'b> Mul<&'a ScalarElem> for &'b ScalarElem {
         }
 
         let mut r = ScalarElem::new_zero();
-        r.reduce_weak(t.as_slice());
+        r.reduce_weak(&t);
         r
     }
 }
@@ -321,7 +319,7 @@ impl FromPrimitive for ScalarElem {
 
     fn from_u64(n: u64) -> Option<ScalarElem> {
         let mut s: ProtBuf8 = ProtBuf::new_zero(BYTES_SIZE);
-        common::u64to8_le(s.as_mut_slice(), &n);
+        common::u64to8_le(&mut *s, &n);
         ScalarElem::unpack(&s)
     }
 }

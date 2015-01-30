@@ -35,7 +35,7 @@ impl FieldElem {
 
     pub fn one() -> FieldElem {
         FieldElem {
-            elem: ProtBuf::from_slice(ONE.as_slice())
+            elem: ProtBuf::from_slice(&ONE)
         }
     }
 
@@ -84,9 +84,7 @@ impl FieldElem {
     }
 
     pub fn cswap(&mut self, cond: i64, other: &mut FieldElem) {
-        common::bytes_cswap::<i64>(cond,
-                                   self.elem.as_mut_slice(),
-                                   other.elem.as_mut_slice());
+        common::bytes_cswap::<i64>(cond, &mut self.elem, &mut other.elem);
     }
 
     pub fn carry(&mut self) {

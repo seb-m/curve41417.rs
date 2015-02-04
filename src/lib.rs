@@ -10,14 +10,13 @@
        html_root_url = "http://doc.rust-lang.org/")]
 
 #![feature(core)]
-#![feature(rand)]
 
-#![cfg_attr(test, feature(rustc_private))]
 #![cfg_attr(test, feature(test))]
 
 #[cfg(test)] extern crate test;
 #[cfg(test)] #[macro_use] extern crate log;
 
+extern crate rand;
 extern crate tars;
 
 pub use common::{SCALAR_SIZE, BYTES_SIZE, Scalar};

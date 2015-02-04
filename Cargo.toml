@@ -1,10 +1,15 @@
 [package]
 name = "curve41417"
 version = "0.0.1"
-description = "A pure-Rust Curve41417 implementation"
-license = "MIT/ASL2"
-readme = "README.md"
 authors = ["Sebastien Martini <seb@dbzteam.org>"]
+license = "MIT/ASL2"
+repository = "https://github.com/seb-m/curve41417.rs"
+homepage = "https://github.com/seb-m/curve41417.rs"
+documentation = "http://seb.dbzteam.org/rs/curve41417/curve41417/"
+description = """
+A pure-Rust Curve41417 implementation
+"""
+readme = "README.md"
 
 [lib]
 name = "curve41417"
@@ -16,3 +21,7 @@ no_mlock = ["tars/no_mlock"]
 
 [dependencies.tars]
 git = "https://github.com/seb-m/tars"
+
+[dependencies]
+log = "0.2.2"
+rand = "0.1.0"

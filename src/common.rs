@@ -1,7 +1,7 @@
 //! Common
 use std::num::{Int, SignedInt};
-use std::rand::os::OsRng;
 
+use rand::os::OsRng;
 use tars::allocator::Allocator;
 use tars::ProtBuf8;
 

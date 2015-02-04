@@ -1,6 +1,4 @@
-# Curve41417
-
-[![Build Status](https://travis-ci.org/seb-m/curve41417.rs.svg?branch=master)](https://travis-ci.org/seb-m/curve41417.rs)
+# Curve41417 [![Build Status](https://travis-ci.org/seb-m/curve41417.rs.svg?branch=master)](https://travis-ci.org/seb-m/curve41417.rs)
 
 
 ## Description

@@ -3,8 +3,8 @@ use std::default::Default;
 use std::fmt::{self, Debug, Formatter};
 use std::num::FromPrimitive;
 use std::ops::{Add, Sub, Neg, Mul, Index, IndexMut};
-use std::rand::{Rand, Rng};
 
+use rand::{Rand, Rng};
 use tars::{ProtBuf, ProtBuf8};
 
 use common::{self, BYTES_SIZE};

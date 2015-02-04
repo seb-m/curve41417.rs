@@ -6,10 +6,10 @@ license = "MIT/ASL2"
 repository = "https://github.com/seb-m/curve41417.rs"
 homepage = "https://github.com/seb-m/curve41417.rs"
 documentation = "http://seb.dbzteam.org/rs/curve41417/curve41417/"
+readme = "README.md"
 description = """
 A pure-Rust Curve41417 implementation
 """
-readme = "README.md"
 
 [lib]
 name = "curve41417"

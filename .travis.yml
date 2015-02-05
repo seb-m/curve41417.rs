@@ -1,13 +1,15 @@
-env:
-  global:
-    - secure: wXF4dA/vp6THwiTlwSgdVadfUJRCQ9+oMzxh/C/RJbhkIv/5/CbkIbG+liVz8Oz0DFx6p8Mdp/jhSXfUwO36ijp4+keyTWzGfF9eP09/KynbXmOl8ssW45cwTrOtPxoYWOlbjpg8WdFHdnZxYeYZxio3FUVwvdOhMSexanOIExM=
 language: rust
+sudo: false
 script:
+  - cargo build --verbose
   - cargo test --verbose --features no_mlock
   - cargo doc --verbose
   - mv target/doc doc
 after_script:
   - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
+env:
+  global:
+    - secure: wXF4dA/vp6THwiTlwSgdVadfUJRCQ9+oMzxh/C/RJbhkIv/5/CbkIbG+liVz8Oz0DFx6p8Mdp/jhSXfUwO36ijp4+keyTWzGfF9eP09/KynbXmOl8ssW45cwTrOtPxoYWOlbjpg8WdFHdnZxYeYZxio3FUVwvdOhMSexanOIExM=
 notifications:
   email:
     on_success: change

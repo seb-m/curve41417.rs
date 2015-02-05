@@ -1,3 +1,5 @@
+#![feature(core)]
+
 extern crate curve41417;
 
 use std::num::FromPrimitive;

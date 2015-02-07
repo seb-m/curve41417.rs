@@ -236,8 +236,6 @@ impl Index<usize> for FieldElem {
 }
 
 impl IndexMut<usize> for FieldElem {
-    type Output = i64;
-
     fn index_mut(&mut self, index: &usize) -> &mut i64 {
         &mut self.elem[*index]
     }

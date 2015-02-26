@@ -62,7 +62,7 @@ pub fn scalar_mult<T: AsSlice<u8>, U: AsSlice<u8>>(n: &T, p: &U) -> ProtBuf8 {
     a[0] = 1;
     d[0] = 1;
 
-    for i in (0us..414).rev() {
+    for i in (0_usize..414).rev() {
         r = (z[i >> 3] >> (i & 7)) & 1;
         a.cswap(r as i64, &mut b);
         c.cswap(r as i64, &mut d);

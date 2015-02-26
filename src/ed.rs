@@ -352,7 +352,7 @@ impl GroupElem {
         let mut q: GroupElem = GroupElem::neutral();
         let nb = n.as_slice();
 
-        for i in (0us..415).rev() {
+        for i in (0_usize..415).rev() {
             let c = ((nb[i / 8] >> (i & 7)) & 1) as i64;
             q.cswap(c, &mut p);
             p = &p + &q;
@@ -708,12 +708,12 @@ mod tests {
     #[test]
     fn test_ops() {
         let mut b = GroupElem::base();
-        for _ in 0us..10 {
+        for _ in 0_usize..10 {
             b = &b + &GroupElem::base();
         }
 
         let nb = GroupElem::base();
-        for _ in 0us..10 {
+        for _ in 0_usize..10 {
             b = &b - &nb;
         }
 
@@ -731,7 +731,7 @@ mod tests {
         let r = q.scalar_mult_cofactor();
 
         let mut s = q.clone();
-        for _ in 0us..7 {
+        for _ in 0_usize..7 {
             s = &s + &q;
         }
         assert_eq!(s, r);

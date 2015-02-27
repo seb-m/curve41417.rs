@@ -10,6 +10,7 @@ readme = "README.md"
 description = """
 A pure-Rust Curve41417 implementation
 """
+keywords = ["crypto", "ecc", "safecurves"]
 
 [lib]
 name = "curve41417"
@@ -23,5 +24,5 @@ no_mlock = ["tars/no_mlock"]
 git = "https://github.com/seb-m/tars"
 
 [dependencies]
-log = "0.2.4"
+log = "0.2.5"
 rand = "0.1.3"

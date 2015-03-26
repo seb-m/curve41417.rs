@@ -1,19 +1,23 @@
 language: rust
 sudo: false
 script:
-  - cargo build --verbose
-  - cargo test --verbose --features no_mlock
-  - cargo doc --verbose
-  - mv target/doc doc
-after_script:
-  - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
+- cargo build --verbose
+- cargo test --verbose --features no_mlock
+- cargo doc --verbose
+after_success: |
+  [ $TRAVIS_BRANCH = master ] &&
+  [ $TRAVIS_PULL_REQUEST = false ] &&
+  echo '<meta http-equiv=refresh content=0;url=curve41417.rs/index.html>' > target/doc/index.html &&
+  pip install ghp-import --user $USER &&
+  $HOME/.local/bin/ghp-import -n target/doc &&
+  git push -qf https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
 env:
   global:
-    - secure: wXF4dA/vp6THwiTlwSgdVadfUJRCQ9+oMzxh/C/RJbhkIv/5/CbkIbG+liVz8Oz0DFx6p8Mdp/jhSXfUwO36ijp4+keyTWzGfF9eP09/KynbXmOl8ssW45cwTrOtPxoYWOlbjpg8WdFHdnZxYeYZxio3FUVwvdOhMSexanOIExM=
+    secure: HaHlXoxukso4NHTKHcXnzt5ERYeMLnB9drhLb0mP7ED8WZGDMbPJnntQUmvaZS7+Q4YokHbYWd39iXmuUXAGJGcE3nnZU/sSDRJZWnpkHsJQyaqsw5fP5bx9kD0wg1cca2JMot4Ewr90LzFNNItxfr/BMZm2Ec8VuaJHmQsifug=
 notifications:
   email:
     on_success: change
     on_failure: change
 os:
-  - linux
-  - osx
+- linux
+- osx

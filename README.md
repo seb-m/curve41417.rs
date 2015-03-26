@@ -8,7 +8,7 @@ A pure-[Rust](http://www.rust-lang.org/) implementation of [Curve41417](http://s
 
 ## Documentation
 
-The generated documentation is available [here](http://seb.dbzteam.org/rs/curve41417/curve41417/).
+The generated documentation is available [here](http://seb.dbzteam.org/curve41417.rs/).
 
 
 ## Example

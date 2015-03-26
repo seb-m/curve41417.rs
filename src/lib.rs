@@ -12,6 +12,7 @@
 
 #![deny(stable_features)]
 #![feature(core)]
+#![feature(convert)]
 
 #![cfg_attr(test, feature(test))]
 

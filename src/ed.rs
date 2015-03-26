@@ -1,4 +1,5 @@
 //! Edwards-form Curve41417 representation
+use std::convert::AsRef;
 use std::default::Default;
 use std::fmt::{self, Debug, Formatter};
 use std::ops::{Add, Sub, Neg, Mul};
@@ -221,11 +222,11 @@ impl GroupElem {
     /// Unpack a Curve41417 point in Edwards representation from its
     /// `bytes` representation. `bytes` must hold a point packed obtained
     /// from a previous call to `pack()`.
-    pub fn unpack<T: AsSlice<u8>>(bytes: &T) -> Option<GroupElem> {
+    pub fn unpack<T: AsRef<[u8]>>(bytes: &T) -> Option<GroupElem> {
         let mut r: GroupElem = GroupElem::new();
 
         // Unpack y, top 2 bits are discarded in FieldElem::unpack().
-        r.y = match FieldElem::unpack(bytes.as_slice()) {
+        r.y = match FieldElem::unpack(bytes.as_ref()) {
             Some(y) => y,
             None => return None
         };
@@ -252,7 +253,7 @@ impl GroupElem {
         // Choose between x and -x
         let mut nrx = -&r.x;
         let parity = r.x.parity_bit();
-        r.x.cswap(((bytes.as_slice()[51] >> 7) ^ parity) as i64, &mut nrx);
+        r.x.cswap(((bytes.as_ref()[51] >> 7) ^ parity) as i64, &mut nrx);
         r.propagate_from_xy();
 
         match success {
@@ -283,13 +284,13 @@ impl GroupElem {
     /// see also
     /// [this](https://moderncrypto.org/mail-archive/curves/2015/000376.html)
     /// discussion.
-    pub fn unpack_from_mont<T: AsSlice<u8>>(bytes: &T, sign_bit: u8)
+    pub fn unpack_from_mont<T: AsRef<[u8]>>(bytes: &T, sign_bit: u8)
                                             -> Option<GroupElem> {
         if sign_bit & 254 != 0 {
             return None;
         }
 
-        let u = match FieldElem::unpack(bytes.as_slice()) {
+        let u = match FieldElem::unpack(bytes.as_ref()) {
             Some(u) => u,
             None => return None
         };
@@ -321,7 +322,7 @@ impl GroupElem {
     /// applied to the base point `BP`. Note that `n` is not clamped by this
     /// method before the multiplication is performed. Calling this method is
     /// equivalent to calling `GroupElem::base().scalar_mult(&n)`.
-    pub fn scalar_mult_base<T: AsSlice<u8>>(n: &T) -> GroupElem {
+    pub fn scalar_mult_base<T: AsRef<[u8]>>(n: &T) -> GroupElem {
         GroupElem::base().scalar_mult(n)
     }
 
@@ -329,7 +330,7 @@ impl GroupElem {
     /// scalar values and `p1` and `p2` are group elements. Note that the
     /// values of `n1` and `n2` are not clamped by this method before their
     /// respective multiplications.
-    pub fn double_scalar_mult<T: AsSlice<u8>>(n1: &T, p1: &GroupElem,
+    pub fn double_scalar_mult<T: AsRef<[u8]>>(n1: &T, p1: &GroupElem,
                                               n2: &T, p2: &GroupElem)
                                               -> GroupElem {
         &p1.scalar_mult(n1) + &p2.scalar_mult(n2)
@@ -347,10 +348,10 @@ impl GroupElem {
     /// want the bits of the scalar to be modified before any scalar
     /// multiplication. Whereas a `ScalarElem` would automatically be reduced
     /// `mod L` (see `base()`) before any scalar multiplication takes place.
-    pub fn scalar_mult<T: AsSlice<u8>>(&self, n: &T) -> GroupElem {
+    pub fn scalar_mult<T: AsRef<[u8]>>(&self, n: &T) -> GroupElem {
         let mut p = self.clone();
         let mut q: GroupElem = GroupElem::neutral();
-        let nb = n.as_slice();
+        let nb = n.as_ref();
 
         for i in (0_usize..415).rev() {
             let c = ((nb[i / 8] >> (i & 7)) & 1) as i64;
@@ -516,9 +517,9 @@ impl GroupElem {
     /// the encoded representation returned by
     /// `elligator_to_representation()`. Otherwise use `elligator_from_bytes()`
     /// instead.
-    pub fn elligator_from_representation<T: AsSlice<u8>>(r: &T)
+    pub fn elligator_from_representation<T: AsRef<[u8]>>(r: &T)
                                                          -> Option<GroupElem> {
-        match FieldElem::unpack(r.as_slice()) {
+        match FieldElem::unpack(r.as_ref()) {
             Some(ref fe) => GroupElem::elligator_from_fe(fe),
             None => None
         }
@@ -534,12 +535,12 @@ impl GroupElem {
     /// `r = s mod q`, as `r` and `-r` map to the same point, it may lead
     /// to obtain a non unique result for
     /// `elligator_to_representation(elligator_from_bytes(s))` in `{r, -r}`.
-    pub fn elligator_from_bytes<T: AsSlice<u8>>(s: &T) -> Option<GroupElem> {
-        if s.as_slice().len() < 64 {
+    pub fn elligator_from_bytes<T: AsRef<[u8]>>(s: &T) -> Option<GroupElem> {
+        if s.as_ref().len() < 64 {
             return None;
         }
 
-        match FieldElem::reduce_weak_from_bytes(s.as_slice()) {
+        match FieldElem::reduce_weak_from_bytes(s.as_ref()) {
             Some(ref fe) => GroupElem::elligator_from_fe(fe),
             None => None
         }
@@ -595,7 +596,7 @@ impl<'a> Neg for &'a GroupElem {
     }
 }
 
-impl<'a, 'b, T> Mul<&'a T> for &'b GroupElem where T: AsSlice<u8> {
+impl<'a, 'b, T> Mul<&'a T> for &'b GroupElem where T: AsRef<[u8]> {
     type Output = GroupElem;
 
     /// Multiply point `self` with scalar value `other`.
@@ -814,12 +815,12 @@ mod tests {
             0xd0, 0x11, 0xd4, 0x1c];
 
         let p =
-            GroupElem::elligator_from_representation(&n.as_slice()).unwrap();
-        assert_eq!(x.as_slice(), p.x.pack().as_slice());
-        assert_eq!(y.as_slice(), p.y.pack().as_slice());
+            GroupElem::elligator_from_representation(&n.as_ref()).unwrap();
+        assert_eq!(x.as_ref(), p.x.pack().as_ref());
+        assert_eq!(y.as_ref(), p.y.pack().as_ref());
 
         let n2 = p.elligator_to_representation().unwrap();
-        assert_eq!(n.as_slice(), n2.as_slice());
+        assert_eq!(n.as_ref(), n2.as_ref());
     }
 
     #[test]
@@ -870,13 +871,13 @@ mod tests {
             0x57, 0x83, 0xcb, 0x02, 0xfc, 0x4c, 0x4a, 0x49,
             0xe8, 0x83, 0xe9, 0x22];
 
-        let p = GroupElem::elligator_from_bytes(&n.as_slice()).unwrap();
-        assert_eq!(x.as_slice(), p.x.pack().as_slice());
-        assert_eq!(y.as_slice(), p.y.pack().as_slice());
+        let p = GroupElem::elligator_from_bytes(&n.as_ref()).unwrap();
+        assert_eq!(x.as_ref(), p.x.pack().as_ref());
+        assert_eq!(y.as_ref(), p.y.pack().as_ref());
 
         let r = p.elligator_to_representation().unwrap();
-        assert!(r.as_slice() == r1.as_slice() ||
-                r.as_slice() == r2.as_slice());
+        assert!(r.as_ref() == r1.as_ref() ||
+                r.as_ref() == r2.as_ref());
     }
 
     #[test]

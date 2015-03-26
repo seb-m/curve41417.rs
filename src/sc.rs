@@ -1,4 +1,5 @@
 //! Curve41417 scalar operations
+use std::convert::AsRef;
 use std::default::Default;
 use std::fmt::{self, Debug, Formatter};
 use std::num::FromPrimitive;
@@ -205,8 +206,8 @@ impl ScalarElem {
 
     /// Unpack scalar value `n`. It must represent a value strictly in
     /// `[0, L-1]` and it should not be expected to be reduced on unpacking.
-    pub fn unpack<T: AsSlice<u8>>(n: &T) -> Option<ScalarElem> {
-        let nb = n.as_slice();
+    pub fn unpack<T: AsRef<[u8]>>(n: &T) -> Option<ScalarElem> {
+        let nb = n.as_ref();
         match nb.len() {
             BYTES_SIZE => Some(ScalarElem::unpack_wo_reduce(nb)),
             _ => None
@@ -217,8 +218,8 @@ impl ScalarElem {
     /// to be of a large enough size in order to provide a good uniformity
     /// of distribution on reductions `mod L`. Thus `b` must be between
     /// `[64, 104]` bytes.
-    pub fn unpack_from_bytes<T: AsSlice<u8>>(b: &T) -> Option<ScalarElem> {
-        let nb = b.as_slice();
+    pub fn unpack_from_bytes<T: AsRef<[u8]>>(b: &T) -> Option<ScalarElem> {
+        let nb = b.as_ref();
         match nb.len() {
             64...104 => Some(ScalarElem::unpack_w_reduce(nb)),
             _ => None
@@ -228,7 +229,7 @@ impl ScalarElem {
     /// Unpack bytes `b` as a scalar, reduce it `mod L` and return the
     /// packed reduced result. See `unpack_from_bytes()` for more details
     /// on performed unpacking.
-    pub fn reduce_from_bytes<T: AsSlice<u8>>(b: &T) -> ProtBuf8 {
+    pub fn reduce_from_bytes<T: AsRef<[u8]>>(b: &T) -> ProtBuf8 {
         ScalarElem::unpack_from_bytes(b).unwrap().pack()
     }
 }
@@ -244,14 +245,14 @@ impl Clone for ScalarElem {
 impl Index<usize> for ScalarElem {
     type Output = i64;
 
-    fn index(&self, index: &usize) -> &i64 {
-        &self.elem[*index]
+    fn index(&self, index: usize) -> &i64 {
+        &self.elem[index]
     }
 }
 
 impl IndexMut<usize> for ScalarElem {
-    fn index_mut(&mut self, index: &usize) -> &mut i64 {
-        &mut self.elem[*index]
+    fn index_mut(&mut self, index: usize) -> &mut i64 {
+        &mut self.elem[index]
     }
 }
 
@@ -435,11 +436,11 @@ mod tests {
             0x30, 0x1a, 0x76, 0x81, 0xcd, 0x24, 0xcf, 0x5c,
             0xde, 0x19, 0x67, 0x03];
 
-        let a = ScalarElem::unpack(&n.as_slice()).unwrap();
+        let a = ScalarElem::unpack(&n.as_ref()).unwrap();
         let apa = &a + &a;
         let aaa1 = &a * &apa;
         let s = &aaa1 - &a;
-        assert_eq!(s.pack().as_slice(), r.as_slice());
+        assert_eq!(s.pack().as_ref(), r.as_ref());
     }
 
     #[test]
@@ -463,11 +464,11 @@ mod tests {
             0x9e, 0x28, 0x2f, 0xce, 0x0e, 0x34, 0xf9, 0xb2,
             0x91, 0xb3, 0x31, 0x06];
 
-        let a = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
+        let a = ScalarElem::unpack_from_bytes(&n.as_ref()).unwrap();
         let apa = &a + &a;
         let aaa1 = &a * &apa;
         let s = &aaa1 - &a;
-        assert_eq!(s.pack().as_slice(), r.as_slice());
+        assert_eq!(s.pack().as_ref(), r.as_ref());
     }
 
     #[test]
@@ -496,11 +497,11 @@ mod tests {
             0xf5, 0x8e, 0xd8, 0xc7, 0x66, 0xcc, 0x3c, 0x23,
             0xde, 0x63, 0x9d, 0x01];
 
-        let a = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
+        let a = ScalarElem::unpack_from_bytes(&n.as_ref()).unwrap();
         let apa = &a + &a;
         let aaa1 = &a * &apa;
         let s = &aaa1 - &a;
-        assert_eq!(s.pack().as_slice(), r.as_slice());
+        assert_eq!(s.pack().as_ref(), r.as_ref());
     }
 
     #[test]
@@ -524,8 +525,8 @@ mod tests {
             0x8d, 0x51, 0xcc, 0xef, 0x87, 0xa4, 0x0d, 0x2c,
             0x87, 0xb0, 0xdd, 0x07];
 
-        let s = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
-        assert_eq!(s.pack().as_slice(), r.as_slice());
+        let s = ScalarElem::unpack_from_bytes(&n.as_ref()).unwrap();
+        assert_eq!(s.pack().as_ref(), r.as_ref());
     }
 
     #[test]
@@ -554,8 +555,8 @@ mod tests {
             0xd4, 0x42, 0x49, 0xcf, 0x33, 0x49, 0x07, 0xdf,
             0xb1, 0x3a, 0xee, 0x00];
 
-        let s = ScalarElem::unpack_from_bytes(&n.as_slice()).unwrap();
-        assert_eq!(s.pack().as_slice(), r.as_slice());
+        let s = ScalarElem::unpack_from_bytes(&n.as_ref()).unwrap();
+        assert_eq!(s.pack().as_ref(), r.as_ref());
     }
 
     #[test]
@@ -570,7 +571,7 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0];
 
-        let s1 = ScalarElem::unpack(&b.as_slice()).unwrap();
+        let s1 = ScalarElem::unpack(&b.as_ref()).unwrap();
         let s2 = FromPrimitive::from_u64(n).unwrap();
         assert_eq!(s1, s2);
     }

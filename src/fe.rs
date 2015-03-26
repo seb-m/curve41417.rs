@@ -230,14 +230,14 @@ impl Clone for FieldElem {
 impl Index<usize> for FieldElem {
     type Output = i64;
 
-    fn index(&self, index: &usize) -> &i64 {
-        &self.elem[*index]
+    fn index(&self, index: usize) -> &i64 {
+        &self.elem[index]
     }
 }
 
 impl IndexMut<usize> for FieldElem {
-    fn index_mut(&mut self, index: &usize) -> &mut i64 {
-        &mut self.elem[*index]
+    fn index_mut(&mut self, index: usize) -> &mut i64 {
+        &mut self.elem[index]
     }
 }
 

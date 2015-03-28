@@ -5,7 +5,7 @@ authors = ["Sebastien Martini <seb@dbzteam.org>"]
 license = "MIT/ASL2"
 repository = "https://github.com/seb-m/curve41417.rs"
 homepage = "https://github.com/seb-m/curve41417.rs"
-documentation = "http://seb.dbzteam.org/rs/curve41417/curve41417/"
+documentation = "http://seb.dbzteam.org/curve41417.rs/"
 readme = "README.md"
 description = """
 A pure-Rust Curve41417 implementation
@@ -25,4 +25,4 @@ git = "https://github.com/seb-m/tars"
 
 [dependencies]
 log = "0.3.0"
-rand = "0.2.1"
+rand = "0.3.3"

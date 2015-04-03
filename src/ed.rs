@@ -605,14 +605,14 @@ impl<'a, 'b, T> Mul<&'a T> for &'b GroupElem where T: AsRef<[u8]> {
     }
 }
 
-impl<'a, 'b> Mul<&'a ProtKey8> for &'b GroupElem {
+impl<'a, 'b> Mul<&'a GroupElem> for &'b ProtKey8 {
     type Output = ProtBuf8;
 
-    /// Multiply point `self` with scalar value `other`.
-    /// Note: the same allocator provided for `self` is used to allocate
+    /// Multiply scalar `self` with point `other`.
+    /// Note: the same allocator provided for `other` is used to allocate
     /// the result.
-    fn mul(self, other: &ProtKey8) -> ProtBuf8 {
-        self.scalar_mult(&other.read()).pack()
+    fn mul(self, other: &GroupElem) -> ProtBuf8 {
+        other.scalar_mult(&self.read()).pack()
     }
 }
 
@@ -669,7 +669,7 @@ mod tests {
         let pk2 = GroupElem::scalar_mult_base(&sk2.read());
 
         let ssk1 = &pk2 * &sk1.read();
-        let ssk2 = &pk1 * &sk2;
+        let ssk2 = &sk2 * &pk1;
         let ssk3 = &pk1 * &sk2.read();
 
         assert_eq!(ssk1.pack(), ssk2);

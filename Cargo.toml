@@ -24,5 +24,7 @@ no_mlock = ["tars/no_mlock"]
 git = "https://github.com/seb-m/tars"
 
 [dependencies]
-log = "0.3.1"
 rand = "0.3.7"
+
+[dev-dependencies]
+log = "0.3.1"

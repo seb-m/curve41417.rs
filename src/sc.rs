@@ -2,9 +2,9 @@
 use std::convert::AsRef;
 use std::default::Default;
 use std::fmt::{self, Debug, Formatter};
-use std::num::FromPrimitive;
 use std::ops::{Add, Sub, Neg, Mul, Index, IndexMut};
 
+use num::FromPrimitive;
 use rand::{Rand, Rng};
 use tars::{ProtBuf, ProtBuf8};
 
@@ -358,8 +358,7 @@ impl PartialEq for ScalarElem {
 
 #[cfg(test)]
 mod tests {
-    use std::num::FromPrimitive;
-
+    use num::FromPrimitive;
     use tars::{ProtBuf, ProtBuf8};
 
     use sc::ScalarElem;

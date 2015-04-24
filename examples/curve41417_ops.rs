@@ -1,12 +1,10 @@
-#![feature(core)]
-
 extern crate curve41417;
-
-use std::num::FromPrimitive;
+extern crate num;
 
 use curve41417::ed::GroupElem;
 use curve41417::mont;
 use curve41417::sc::ScalarElem;
+use num::FromPrimitive;
 
 
 fn main () {

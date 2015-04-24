@@ -1,8 +1,5 @@
 //! Common
-// FIXME: follow https://github.com/rust-lang/rust/pull/23549
-#[allow(deprecated)]
-use std::num::SignedInt;
-
+use num::{One, PrimInt, Signed};
 use rand::os::OsRng;
 use tars::allocator::Allocator;
 use tars::ProtBuf8;
@@ -50,12 +47,10 @@ pub fn u64to8_le(buf: &mut [u8], val: &u64) {
 /// `x` and `y` are swapped iff `cond` is equal to `1`, there are left
 /// unchanged iff `cond` is equal to `0`. Currently only works for arrays
 /// of signed integers. `cond` is expected to be `0` or `1`.
-// FIXME: follow https://github.com/rust-lang/rust/pull/23549
-#[allow(deprecated)]
-pub fn bytes_cswap<T: SignedInt>(cond: T, x: &mut [T], y: &mut [T]) {
+pub fn bytes_cswap<T: One + PrimInt + Signed>(cond: T, x: &mut [T], y: &mut [T]) {
     assert_eq!(x.len(), y.len());
 
-    let c: T = !(cond - T::one());
+    let c: T = !(cond - One::one());
     for i in 0_usize..x.len() {
         let t = c & (x[i] ^ y[i]);
         x[i] = x[i] ^ t;

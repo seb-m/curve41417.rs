@@ -37,6 +37,7 @@ For another example see [curve41417_ops.rs](examples/curve41417_ops.rs).
 
 ## Notes
 
+* This code is expected to target and compile with the current master branch of `rustc`.
 * This code is experimental and its crypto operations are highly unoptimized.
 * This code is mainly inspired by [TweetNaCl](http://tweetnacl.cr.yp.to/) and [Ed25519](http://ed25519.cr.yp.to/software.html).
 

@@ -48,7 +48,7 @@ pub fn scalar_mult<T: AsRef<[u8]>, U: AsRef<[u8]>>(n: &T, p: &U) -> ProtBuf8 {
     let mut d: FieldElem;
     let mut e: FieldElem;
     let mut f: FieldElem;
-    let mut pe: FieldElem;
+    let pe: FieldElem;
     let mut r: u8;
 
     // Unpack p, top 2 bits are discarded in FieldElem::unpack().

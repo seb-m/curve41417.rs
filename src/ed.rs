@@ -891,8 +891,8 @@ mod tests {
 
     #[test]
     fn test_elligator_p2s() {
-        let mut p1: GroupElem;
-        let mut e: ProtBuf8;
+        let p1: GroupElem;
+        let e: ProtBuf8;
         loop {
             let sk = GroupElem::gen_key();
             let pk = GroupElem::scalar_mult_base(&sk.read());

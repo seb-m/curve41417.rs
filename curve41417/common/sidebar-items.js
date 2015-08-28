@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["BYTES_SIZE","Size of Curve41417's packed element"],["SCALAR_SIZE","Size of Curve41417's scalar value"]],"trait":[["Scalar","Trait to augment data buffers for scalar values"]]});

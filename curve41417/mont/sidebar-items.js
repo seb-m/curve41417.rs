@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["gen_key","Generate a new secret key"],["scalar_mult","Compute scalar multiplication"],["scalar_mult_base","Compute scalar multiplication with base point"]]});

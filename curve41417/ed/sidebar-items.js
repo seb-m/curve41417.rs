@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GroupElem","A group element i.e. a point in Edwards representation."]]});

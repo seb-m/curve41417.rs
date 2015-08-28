@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `GroupElem` struct in crate `curve41417`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, GroupElem">
+
+    <title>curve41417::ed::GroupElem - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+
+    <link rel="shortcut icon" href="http://www.rust-lang.org/favicon.ico">
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <section class="sidebar">
+        <a href='../../curve41417/index.html'><img src='http://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png' alt='' width='100'></a>
+        <p class='location'><a href='../index.html'>curve41417</a>::<wbr><a href='index.html'>ed</a></p><script>window.sidebarCurrent = {name: 'GroupElem', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </section>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>curve41417</a>::<wbr><a href='index.html'>ed</a>::<wbr><a class='struct' href=''>GroupElem</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-3119' class='srclink' href='../../src/curve41417/ed.rs.html#119-124' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct GroupElem {
+    // some fields omitted
+}</pre><div class='docblock'><p>A group element i.e. a point in Edwards representation.</p>
+
+<p>It handle various group elements operations such as scalar
+multiplications, point additions, Elligator point mapping,
+key pairs generation,...</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><code>impl <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h3><div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>() -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<div class='docblock'><p>Return a new group element with all its coordinates set to zero.</p>
+</div><h4 id='method.zero' class='method'><code>fn <a href='#method.zero' class='fnname'>zero</a>() -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<div class='docblock'><p>Return a group element with all its coordinates set to zero.</p>
+</div><h4 id='method.neutral' class='method'><code>fn <a href='#method.neutral' class='fnname'>neutral</a>() -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<div class='docblock'><p>Return the neutral point.</p>
+</div><h4 id='method.base' class='method'><code>fn <a href='#method.base' class='fnname'>base</a>() -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<div class='docblock'><p>Return the base point <code>(x, 34)</code> of prime order <code>L</code>.</p>
+</div><h4 id='method.gen_key' class='method'><code>fn <a href='#method.gen_key' class='fnname'>gen_key</a>() -&gt; <a class='type' href='../../tars/key/type.ProtKey8.html' title='tars::key::ProtKey8'>ProtKey8</a></code></h4>
+<div class='docblock'><p>Generate a new secret key at random. It is clamped before being
+returned.</p>
+</div><h4 id='method.pack' class='method'><code>fn <a href='#method.pack' class='fnname'>pack</a>(&amp;self) -&gt; <a class='type' href='../../tars/buf/type.ProtBuf8.html' title='tars::buf::ProtBuf8'>ProtBuf8</a></code></h4>
+<div class='docblock'><p>Pack a group elem&#39;s coordinate <code>y</code> along with a sign bit taken from
+its <code>x</code> coordinate. This packed point may later be unpacked with
+<code>unpack()</code>.</p>
+</div><h4 id='method.unpack' class='method'><code>fn <a href='#method.unpack' class='fnname'>unpack</a>&lt;T: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>[<a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>]</a>&gt;&gt;(bytes: &amp;T) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a>&gt;</code></h4>
+<div class='docblock'><p>Unpack a Curve41417 point in Edwards representation from its
+<code>bytes</code> representation. <code>bytes</code> must hold a point packed obtained
+from a previous call to <code>pack()</code>.</p>
+</div><h4 id='method.pack_to_mont' class='method'><code>fn <a href='#method.pack_to_mont' class='fnname'>pack_to_mont</a>(&amp;self) -&gt; <a class='type' href='../../tars/buf/type.ProtBuf8.html' title='tars::buf::ProtBuf8'>ProtBuf8</a></code></h4>
+<div class='docblock'><p>Convert and pack this point from Edwards coordinates to
+Montgomery&#39;s x-coordinate. This result may be used as input
+point in <code>curve41417::mont</code> scalar multiplications.</p>
+</div><h4 id='method.unpack_from_mont' class='method'><code>fn <a href='#method.unpack_from_mont' class='fnname'>unpack_from_mont</a>&lt;T: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>[<a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>]</a>&gt;&gt;(bytes: &amp;T, sign_bit: <a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a>&gt;</code></h4>
+<div class='docblock'><p>Unpack point from packed Montgomery&#39;s x-coordinate along with a
+sign bit originally obtained from the method <code>sign_bit()</code>. This
+unpacking may be used in a similar case than
+<a href="https://moderncrypto.org/mail-archive/curves/2014/000293.html">this</a>,
+see also
+<a href="https://moderncrypto.org/mail-archive/curves/2015/000376.html">this</a>
+discussion.</p>
+</div><h4 id='method.sign_bit' class='method'><code>fn <a href='#method.sign_bit' class='fnname'>sign_bit</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a></code></h4>
+<div class='docblock'><p>Return the sign bit, a value equal to zero or one exclusively,
+associated with the packed representation of this point. This
+returned value may then be used as argument when calling
+<code>unpack_from_mont()</code>.</p>
+</div><h4 id='method.scalar_mult_base' class='method'><code>fn <a href='#method.scalar_mult_base' class='fnname'>scalar_mult_base</a>&lt;T: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>[<a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>]</a>&gt;&gt;(n: &amp;T) -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<div class='docblock'><p>Return a point <code>q</code> such that <code>q=n.BP</code> where <code>n</code> is a scalar value
+applied to the base point <code>BP</code>. Note that <code>n</code> is not clamped by this
+method before the multiplication is performed. Calling this method is
+equivalent to calling <code>GroupElem::base().scalar_mult(&amp;n)</code>.</p>
+</div><h4 id='method.double_scalar_mult' class='method'><code>fn <a href='#method.double_scalar_mult' class='fnname'>double_scalar_mult</a>&lt;T: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>[<a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>]</a>&gt;&gt;(n1: &amp;T, p1: &amp;<a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a>, n2: &amp;T, p2: &amp;<a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a>) -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<div class='docblock'><p>Return a point <code>q</code> such that <code>q=n1.p1+n2.p2</code> where <code>n1</code> and <code>n2</code> are
+scalar values and <code>p1</code> and <code>p2</code> are group elements. Note that the
+values of <code>n1</code> and <code>n2</code> are not clamped by this method before their
+respective multiplications.</p>
+</div><h4 id='method.scalar_mult' class='method'><code>fn <a href='#method.scalar_mult' class='fnname'>scalar_mult</a>&lt;T: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>[<a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>]</a>&gt;&gt;(&amp;self, n: &amp;T) -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<div class='docblock'><p>Return a point <code>q</code> such that <code>q=n.self</code> where <code>n</code> is the scalar
+value applied to the point <code>self</code>. Note that the value of <code>n</code> is
+not clamped by this method before the scalar multiplication is
+performed. Especially no cofactor multiplication is implicitly
+applied. Use <code>scalar_mult_cofactor()</code> prior to calling this method
+to explictly pre-cofactor this point.</p>
+
+<p>This method deliberately takes as input parameter a raw scalar
+instead of a <code>ScalarElem</code> for the reason that in some cases we don&#39;t
+want the bits of the scalar to be modified before any scalar
+multiplication. Whereas a <code>ScalarElem</code> would automatically be reduced
+<code>mod L</code> (see <code>base()</code>) before any scalar multiplication takes place.</p>
+</div><h4 id='method.scalar_mult_cofactor' class='method'><code>fn <a href='#method.scalar_mult_cofactor' class='fnname'>scalar_mult_cofactor</a>(&amp;self) -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<div class='docblock'><p>Return a point <code>q</code> such that <code>q=8.self</code> where <code>8</code> is curve&#39;s cofactor
+applied to this point&#39;s instance.</p>
+</div><h4 id='method.elligator_to_representation' class='method'><code>fn <a href='#method.elligator_to_representation' class='fnname'>elligator_to_representation</a>(&amp;self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='type' href='../../tars/buf/type.ProtBuf8.html' title='tars::buf::ProtBuf8'>ProtBuf8</a>&gt;</code></h4>
+<div class='docblock'><p>Use <a href="http://elligator.cr.yp.to/">Elligator</a> to encode a curve
+point to a byte-string representation.</p>
+</div><h4 id='method.elligator_from_representation' class='method'><code>fn <a href='#method.elligator_from_representation' class='fnname'>elligator_from_representation</a>&lt;T: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>[<a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>]</a>&gt;&gt;(r: &amp;T) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a>&gt;</code></h4>
+<div class='docblock'><p>Map a byte-string representation to a curve point. Return a valid
+group element if it produces to a well-defined point.</p>
+
+<p>The argument provided to this method is expected to originate from
+the encoded representation returned by
+<code>elligator_to_representation()</code>. Otherwise use <code>elligator_from_bytes()</code>
+instead.</p>
+</div><h4 id='method.elligator_from_bytes' class='method'><code>fn <a href='#method.elligator_from_bytes' class='fnname'>elligator_from_bytes</a>&lt;T: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>[<a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>]</a>&gt;&gt;(s: &amp;T) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a>&gt;</code></h4>
+<div class='docblock'><p>Map a byte-string to a curve point. Return a valid group element
+if <code>s</code> produces to a well-defined point. The provided input is
+first reduced in <code>Fq</code>. For better uniformity of the distribution
+in <code>Fq</code> the input must be sufficiently large i.e. between [64, 104]
+bytes.</p>
+
+<p>Note that since <code>ψ(r) = ψ(-r)</code> with <code>ψ</code> the mapping function and
+<code>r = s mod q</code>, as <code>r</code> and <code>-r</code> map to the same point, it may lead
+to obtain a non unique result for
+<code>elligator_to_representation(elligator_from_bytes(s))</code> in <code>{r, -r}</code>.</p>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><code>impl&lt;'a, 'b&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.Add.html' title='core::ops::Add'>Add</a>&lt;&amp;'a <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a>&gt; for &amp;'b <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<h4 id='method.add' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/ops/trait.Add.html#method.add' class='fnname'>add</a>(self, other: &amp;<a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a>) -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a, 'b&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.Sub.html' title='core::ops::Sub'>Sub</a>&lt;&amp;'a <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a>&gt; for &amp;'b <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<h4 id='method.sub' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/ops/trait.Sub.html#method.sub' class='fnname'>sub</a>(self, other: &amp;<a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a>) -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.Neg.html' title='core::ops::Neg'>Neg</a> for &amp;'a <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<h4 id='method.neg' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/ops/trait.Neg.html#method.neg' class='fnname'>neg</a>(self) -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a, 'b, T&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.Mul.html' title='core::ops::Mul'>Mul</a>&lt;&amp;'a T&gt; for &amp;'b <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a> <span class='where'>where T: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>[<a href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>]</a>&gt;</span></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<h4 id='method.mul' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/ops/trait.Mul.html#method.mul' class='fnname'>mul</a>(self, other: &amp;T) -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+</div><h3 class='impl'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> for <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h3><div class='impl-items'><h4 id='method.clone' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+<h4 id='method.clone_from' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code></h4>
+</div><h3 class='impl'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/default/trait.Default.html' title='core::default::Default'>Default</a> for <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h3><div class='impl-items'><h4 id='method.default' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/default/trait.Default.html#method.default' class='fnname'>default</a>() -&gt; <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h4>
+</div><h3 class='impl'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a> for <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h3><div class='impl-items'><h4 id='method.fmt' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#method.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class='struct' href='https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></h4>
+</div><h3 class='impl'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a> for <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h3><div class='impl-items'><h4 id='method.eq' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.eq' class='fnname'>eq</a>(&amp;self, other: &amp;<a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a>) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.ne' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, other: &amp;Rhs) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+</div><h3 class='impl'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> for <a class='struct' href='../../curve41417/ed/struct.GroupElem.html' title='curve41417::ed::GroupElem'>GroupElem</a></code></h3><div class='impl-items'></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <div id="help" class="hidden">
+        <div>
+            <div class="shortcuts">
+                <h1>Keyboard Shortcuts</h1>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h1>Search Tricks</h1>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "curve41417";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    
+    <script async src="../../search-index.js"></script>
+</body>
+</html>

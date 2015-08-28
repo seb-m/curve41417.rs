@@ -25,7 +25,7 @@ git = "https://github.com/seb-m/tars"
 
 [dependencies]
 rand = "0.3.10"
-num = "0.1.26"
+num = "0.1.27"
 
 [dev-dependencies]
 log = "0.3.1"
